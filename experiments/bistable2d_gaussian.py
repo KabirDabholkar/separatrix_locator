@@ -18,11 +18,11 @@ from pathlib import Path
 
 import torch
 
-from separatrix_locator.core.separatrix_locator import SeparatrixLocator
-from separatrix_locator.core.models import ResNet
-from separatrix_locator.dynamics import Bistable2D
-from separatrix_locator.distributions import MultivariateGaussian, multiscaler
-from separatrix_locator.plotting.plots import plot_dynamics_2D
+from src.core.separatrix_locator import SeparatrixLocator
+from src.core.models import ResNet
+from src.dynamics import Bistable2D
+from src.distributions import MultivariateGaussian, multiscaler
+from src.plotting.plots import plot_dynamics_2D
 
 
 def run_bistable2d_experiment(

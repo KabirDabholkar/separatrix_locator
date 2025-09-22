@@ -1,7 +1,7 @@
 import pytest
 
 torch = pytest.importorskip("torch")
-from separatrix_locator.dynamics.bistableND import BistableND
+from src.dynamics.bistableND import BistableND
 
 
 def test_function_shape_and_type():

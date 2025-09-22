@@ -6,7 +6,7 @@ in dynamical systems using Koopman eigenfunctions.
 """
 
 from .separatrix_locator import SeparatrixLocator
-from .models import KoopmanEigenfunctionModel, ResRBF, LinearModel, DeepKoopmanModel
+from .models import ResNet
 from .training import train_with_logger, eval_loss, log_metrics, DecayModule
 from .gradient_descent import runGD, runGD_basic, process_initial_conditions
 from .advanced_models import (
@@ -17,10 +17,7 @@ from .advanced_models import (
 
 __all__ = [
     "SeparatrixLocator",
-    "KoopmanEigenfunctionModel", 
-    "ResRBF",
-    "LinearModel",
-    "DeepKoopmanModel",
+    "ResNet",
     "train_with_logger",
     "eval_loss",
     "log_metrics",

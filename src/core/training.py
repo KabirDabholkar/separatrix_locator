@@ -12,7 +12,6 @@ from functools import partial
 from typing import Optional, List, Callable, Dict, Any
 import numpy as np
 
-from .models import KoopmanEigenfunctionModel
 from ..utils.helpers import restrict_to_distribution_loss
 
 

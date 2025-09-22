@@ -78,9 +78,9 @@ def verify_installation():
         print("✅ Package import successful")
         
         # Test core functionality
-        from separatrix_locator import SeparatrixLocator
-        from separatrix_locator.dynamics import Bistable1D
-        from separatrix_locator.core import LinearModel
+        from .core.separatrix_locator import SeparatrixLocator
+        from .dynamics.bistableND import Bistable1D
+        from .core.models import LinearModel
         
         # Quick test
         dynamics = Bistable1D()

@@ -1,6 +1,9 @@
-from src.separatrix_locator.core.models import ResNet
-from src.separatrix_locator.distributions import MultivariateGaussian, multiscaler
+from src.core.models import ResNet
+from src.distributions import MultivariateGaussian, multiscaler
+from src.dynamics import Bistable2D
+from pathlib import Path
 
+dynamics = Bistable2D()
 
 model = ResNet(
     input_dim=2,
@@ -20,5 +23,4 @@ dist = MultivariateGaussian(
 
 dists = multiscaler(dist, [0.1, 0.5, 1.0])
 
-
-print(model.name)
+save_dir = Path("results") / f"{dynamics.name}_{dists.name}" / f"{model.name}"

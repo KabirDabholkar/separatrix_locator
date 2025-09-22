@@ -6,9 +6,7 @@ from typing import Optional, Tuple, Union, Iterable, List
 
 import torch
 
-from .base import BaseDistribution
-
-
+from .base import BaseDistribution, BaseDistributionList
 class MultivariateGaussian(BaseDistribution):
     """
     Multivariate Gaussian distribution with mean and covariance.
@@ -73,10 +71,45 @@ class MultivariateGaussian(BaseDistribution):
         return self._torch_distribution().sample(sample_shape)
 
 
+class MultivariateGaussianList(BaseDistributionList):
+    """
+    A container class for holding a list of MultivariateGaussian instances.
+
+    If `scales` are provided, they will be used directly (and exposed via the
+    `scales` attribute) to avoid recomputing them from the covariance matrices.
+    Otherwise, scales are inferred relative to the first distribution.
+    """
+    def __init__(
+        self,
+        distributions: List[MultivariateGaussian],
+        name: Optional[str] = None,
+        scales: Optional[Iterable[float]] = None,
+    ):
+        super().__init__(distributions, name)
+        # Prefer provided scales to avoid recomputation
+        if scales is not None:
+            scales_float: List[float] = []
+            for s in scales:
+                scales_float.append(float(s))
+            self.scales: List[float] = scales_float
+        else:
+            # Extract scales from covariance matrices by comparing to first distribution
+            base_cov = distributions[0].covariance_matrix
+            inferred_scales: List[float] = []
+            for dist in distributions:
+                inferred_scale = (dist.covariance_matrix / base_cov)[0, 0].item()
+                inferred_scales.append(float(inferred_scale))
+            self.scales = inferred_scales
+
+        # Update the name to include scales if no explicit name was provided
+        if name is None:
+            scale_strs = [str(s) for s in self.scales]
+            self._name = f"MultivariateGaussianList_scales_{'_'.join(scale_strs)}"
+
 def multiscaler(
     distribution: MultivariateGaussian,
     scales: Iterable[float],
-) -> List[MultivariateGaussian]:
+) -> BaseDistributionList:
     """
     Create scaled copies of a `MultivariateGaussian` by scaling its covariance matrix.
 
@@ -85,7 +118,7 @@ def multiscaler(
         scales: Iterable of positive scaling factors. Can be a list/tuple, numpy array, or other iterable of floats.
 
     Returns:
-        List of `MultivariateGaussian` instances with covariance matrices scaled by each factor.
+        BaseDistributionList containing `MultivariateGaussian` instances with covariance matrices scaled by each factor.
     """
     if not isinstance(distribution, MultivariateGaussian):
         raise TypeError("distribution must be a MultivariateGaussian")
@@ -111,4 +144,6 @@ def multiscaler(
             )
         )
 
-    return scaled_distributions
+    # Return a MultivariateGaussianList carrying the provided scales to avoid
+    # recomputing them from covariances later.
+    return MultivariateGaussianList(scaled_distributions, scales=scales)

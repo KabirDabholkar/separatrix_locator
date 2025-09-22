@@ -13,8 +13,7 @@ from typing import Optional, List, Union
 class ResNet(nn.Module):
     """Residual network for Koopman eigenfunction learning.
     
-    This model uses residual connections across layers. Despite the previous
-    name, it does not rely on explicit RBF layers.
+    This model uses residual connections across layers.
     """
     
     def __init__(
@@ -91,6 +90,11 @@ class ResNet(nn.Module):
             if isinstance(self.input_center, torch.Tensor)
             else None
         )
+        has_nonzero_center = (
+            any(x != 0 for x in center_list)
+            if center_list is not None
+            else False
+        )
         return (
             f"ResNet_"
             f"inputdim{self.input_dim}_"
@@ -98,10 +102,6 @@ class ResNet(nn.Module):
             f"numlayers{self.num_layers}_"
             f"outputdim{self.output_dim}_"
             f"inputscalefactor{self.input_scale_factor}_"
-            f"inputcenter{center_list}_"
+            f"hasnonzero_center{has_nonzero_center}_"
             f"smalllastlayer{self.scale_last_layer_by_inv_sqrt_hidden}"
         )
-
-
-
-

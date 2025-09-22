@@ -10,9 +10,9 @@ This package provides:
 - Example notebooks and tutorials
 
 Example usage:
-    from separatrix_locator import SeparatrixLocator
-    from separatrix_locator.dynamics import Bistable1D
-    from separatrix_locator.core import ResRBF
+    from .core.separatrix_locator import SeparatrixLocator
+    from .dynamics.bistableND import Bistable1D
+    from .core.models import ResRBF
     
     # Create a simple bistable system
     dynamics = Bistable1D()
@@ -22,7 +22,7 @@ Example usage:
     locator = SeparatrixLocator(model_class=model, num_models=5)
     
     # Train and find separatrix
-    from separatrix_locator.distributions import MultivariateGaussian
+    from .distributions.gaussian import MultivariateGaussian
     dist = MultivariateGaussian(dim=dynamics.dim)
     locator.fit(dynamics.function, dist)
     separatrix_points = locator.find_separatrix(dist)
@@ -33,7 +33,7 @@ __author__ = "Kabir Dabholkar"
 
 # Core classes
 from .core.separatrix_locator import SeparatrixLocator
-from .core.models import KoopmanEigenfunctionModel, ResNet, ResRBF, LinearModel
+from .core.models import ResNet
 
 # Dynamics systems
 from .dynamics import Bistable1D, Bistable2D, Bistable3D, BistableND
@@ -49,10 +49,7 @@ from .distributions import BaseDistribution, MultivariateGaussian
 __all__ = [
     # Core
     "SeparatrixLocator",
-    "KoopmanEigenfunctionModel", 
     "ResNet",
-    "ResRBF",
-    "LinearModel",
     
     # Dynamics
     "BistableND",

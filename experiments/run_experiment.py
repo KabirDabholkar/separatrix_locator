@@ -17,11 +17,11 @@ import torch.nn as nn
 # Add the src directory to the path so we can import separatrix_locator
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from separatrix_locator.core.separatrix_locator import SeparatrixLocator
-from separatrix_locator.core.models import ResNet, KoopmanEigenfunctionModel, LinearModel, DeepKoopmanModel
-from separatrix_locator.dynamics import Bistable2D
-from separatrix_locator.distributions import MultivariateGaussian, multiscaler
-from separatrix_locator.plotting.plots import plot_dynamics_2D
+from src.core.separatrix_locator import SeparatrixLocator
+from src.core.models import ResNet, KoopmanEigenfunctionModel, LinearModel, DeepKoopmanModel
+from src.dynamics import Bistable2D
+from src.distributions import MultivariateGaussian, multiscaler
+from src.plotting.plots import plot_dynamics_2D
 
 from config import (
     ExperimentConfig, 
@@ -37,10 +37,10 @@ from config import (
 def create_dynamics(config: DynamicsConfig):
     """Create a dynamics object from configuration."""
     if config.system_type == "Bistable2D":
-        from separatrix_locator.dynamics import Bistable2D
+        from src.dynamics import Bistable2D
         return Bistable2D()
     elif config.system_type == "BistableND":
-        from separatrix_locator.dynamics import BistableND
+        from src.dynamics import BistableND
         return BistableND(dim=config.dim, bistable_axis=config.bistable_axis)
     else:
         raise ValueError(f"Unknown system type: {config.system_type}")

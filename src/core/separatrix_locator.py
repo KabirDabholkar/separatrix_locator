@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Iterable, Optional, Union, Dict, Any, List
 import os
 
-from .models import KoopmanEigenfunctionModel, LinearModel
 from ..utils.compose import compose
 
 
@@ -48,8 +47,7 @@ class SeparatrixLocator(BaseEstimator):
     def __init__(
         self, 
         num_models: int = 10, 
-        dynamics_dim: int = 1, 
-        model_class: type = KoopmanEigenfunctionModel,
+        dynamics_dim: int = 1,
         models: Optional[List[nn.Module]] = None,
         lr: float = 1e-3, 
         epochs: int = 100, 
@@ -65,32 +63,9 @@ class SeparatrixLocator(BaseEstimator):
         self.device = device
         self.verbose = verbose
         self.dynamics_dim = dynamics_dim
-        self.model_class = model_class
         self.models = models if models is not None else []
         self.scores = None
         self.functions_for_gradient_descent = None
-
-    def init_models(self):
-        """Initialize the ensemble of models."""
-        # If models are already provided, use them
-        if self.models:
-            return
-            
-        if self.model_class == KoopmanEigenfunctionModel:
-            self.models = [self.model_class(self.dynamics_dim).to(self.device) for _ in range(self.num_models)]
-        elif self.model_class == LinearModel:
-            self.models = [self.model_class(self.dynamics_dim, output_dim=1).to(self.device) for _ in range(self.num_models)]
-        else:
-            # For other model classes (including partial functions), try the original approach
-            try:
-                self.models = [self.model_class(self.dynamics_dim).to(self.device) for _ in range(self.num_models)]
-            except TypeError:
-                # If that fails, try with input_dim parameter
-                try:
-                    self.models = [self.model_class(input_dim=self.dynamics_dim).to(self.device) for _ in range(self.num_models)]
-                except TypeError:
-                    # If that also fails, try with just the input_dim as positional argument
-                    self.models = [self.model_class(self.dynamics_dim, hidden_size=128, num_layers=5).to(self.device) for _ in range(self.num_models)]
 
     def fit(self, func, distribution, **kwargs):
         """
