@@ -1,49 +1,25 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
+# Build artifacts
 build/
 dist/
-.eggs/
 *.egg-info/
-.installed.cfg
 *.egg
-
-# Virtual environments
-.venv
-venv/
-ENV/
-
-# Unit test / coverage reports
+__pycache__/
 .pytest_cache/
 .coverage
-.tox/
-nosetests.xml
-coverage.xml
 htmlcov/
+*.pyc
+*.pyo
+*.pyd
+*.log
 
-# Jupyter Notebook
-.ipynb_checkpoints/
+# Virtual envs
+.env
+.venv
 
-# PyCharm / VSCode
-.idea/
+# IDE
 .vscode/
+.idea/
 
 # OS
 .DS_Store
-
-# Logs and outputs
-logs/
-outputs/
-results/
-multirun/
-runs/
-
-# Project specific
-separatrix_locator.egg-info/
+Thumbs.db

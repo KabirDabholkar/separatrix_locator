@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "separatrix-locator"
+version = "0.0.0"
+description = "Tools for locating separatrices in dynamical systems"
+readme = "README.md"
+authors = [{ name = "Your Name" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+# Keep dependencies minimal here; devs can use top-level requirements.txt
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["separatrix_locator*"]
+
+[project.scripts]
+separatrix-locator = "separatrix_locator.cli:main"
