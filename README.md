@@ -36,16 +36,16 @@ python experiments/simple_experiment.py configs/[config_name].py
 ```
 
 - **``configs/bistable2d.py``**: Simple 2D bistable system.
-```math
-\dot x = x - x^3 \\
-\dot y = -y
-```
+    ```math
+    \dot x = x - x^3 \\
+    \dot y = -y
+    ```
 
 - **``configs/duffing.py``**: Classic 2D nonlinear bistable oscillator 
-```math
-\dot x = -y \\
-\dot y = x - x^3
-```
+    ```math
+    \dot x = -y \\
+    \dot y = x - x^3
+    ```
 
 - **``configs/1bitflipflop2D.py``**: 2-unit GRU RNN trained to do 1-bit flip with bistable dynamics. Pre-trained params included in repository.
 
