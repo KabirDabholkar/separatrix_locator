@@ -118,4 +118,4 @@ locator.fit(
     RHS_function = rhs_function
 )
 ```
-The default is the latter.
+If not provided, the default is the squashed variant.
