@@ -47,7 +47,9 @@ python experiments/simple_experiment.py configs/[config_name].py
 \dot y = x - x^3
 ```
 
-- **``configs/1bitflipflop2D.py``**: 2-unit RNN trained to do 2-bit flip with bistable dynamics. Pre-trained params included in repository.
+- **``configs/1bitflipflop2D.py``**: 2-unit GRU RNN trained to do 1-bit flip with bistable dynamics. Pre-trained params included in repository.
+
+- **``configs/1bitflipflop64D.py``**: 64-unit Vanilla RNN trained to do 1-bit flip with bistable dynamics. Pre-trained params included in repository.
 
 Resulting figures and models are saved in `results`.
 
