@@ -76,3 +76,50 @@ trajectories, separatrix_points = locator.find_separatrix(dynamics.distribution)
 - **RBF**: Radial basis functions
 
 
+## Implement a custom dynamical system
+
+Example: 1D system with \(\dot x = x - x^3\), implemented by inheriting from `src/dynamics/base.py`'s `DynamicalSystem`:
+
+```python
+import torch
+from src.dynamics.base import DynamicalSystem
+
+class CubicBistable1D(DynamicalSystem):
+    def __init__(self):
+        super().__init__(dim=1, name="CubicBistable1D")
+
+    def function(self, x: torch.Tensor) -> torch.Tensor:
+        # x shape: (batch, 1)
+        return x - x ** 3
+
+    def get_attractors(self) -> torch.Tensor:
+        # Stable fixed points at x = -1 and x = 1
+        return torch.tensor([[-1.0], [1.0]], dtype=torch.float32)
+
+
+# Usage with the SeparatrixLocator
+if __name__ == "__main__":
+    from src.core.separatrix_locator import SeparatrixLocator
+    from src.core.models import ResNet
+
+    dynamics = CubicBistable1D()
+
+    locator = SeparatrixLocator(
+        num_models=3,
+        dynamics_dim=dynamics.dim,
+        model_class=ResNet,
+        epochs=200,
+    )
+
+    # Choose a sampling distribution for initial conditions (mean 0, std 1)
+    init_dist = torch.distributions.Normal(loc=torch.tensor([0.0]), scale=torch.tensor([1.0]))
+
+    # Train models to learn Koopman eigenfunctions
+    locator.fit(dynamics.function, init_dist)
+
+    # Prepare for gradient-based refinement and find separatrix
+    locator.prepare_models_for_gradient_descent(init_dist)
+    trajectories, separatrix_points = locator.find_separatrix(init_dist)
+```
+
+

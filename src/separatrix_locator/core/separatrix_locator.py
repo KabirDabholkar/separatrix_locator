@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Union, Dict, Any, List
 import os
 
-from ..utils.compose import compose
+from separatrix_locator.utils.compose import compose
 
 
 class SeparatrixLocator(BaseEstimator):
@@ -30,8 +30,8 @@ class SeparatrixLocator(BaseEstimator):
         Number of models to train for ensemble separatrix location
     dynamics_dim : int, default=1
         Dimensionality of the dynamical system
-    model_class : class, default=KoopmanEigenfunctionModel
-        Neural network class to use for learning eigenfunctions
+    models : list,
+        List of models to use for training.
     lr : float, default=1e-3
         Learning rate for training
     epochs : int, default=100
@@ -49,9 +49,9 @@ class SeparatrixLocator(BaseEstimator):
         num_models: int = 10, 
         dynamics_dim: int = 1,
         models: Optional[List[nn.Module]] = None,
-        lr: float = 1e-3, 
+        lr: float = 1e-4, 
         epochs: int = 100, 
-        use_multiprocessing: bool = True, 
+        use_multiprocessing: bool = False, 
         verbose: bool = False, 
         device: str = "cpu"
     ):
@@ -101,8 +101,6 @@ class SeparatrixLocator(BaseEstimator):
             **kwargs
         )
 
-        if len(self.models) == 0:
-            self.init_models()
 
         if self.verbose:
             print(f"Training {len(self.models)} models...")

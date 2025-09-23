@@ -12,12 +12,13 @@ from pathlib import Path
 import argparse
 
 import torch
+        
+from functools import partial
 import torch.nn as nn
 
 # Import from the separatrix_locator package
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from src.core.separatrix_locator import SeparatrixLocator
-from src.plotting.plots import plot_dynamics_2D, plot_model_output_histograms
+from separatrix_locator.core.separatrix_locator import SeparatrixLocator
+from separatrix_locator.plotting.plots import plot_dynamics_2D, plot_model_output_histograms
 
 
 def load_config(config_path: str):
@@ -420,15 +421,11 @@ def main():
     # Resolve optimizer
     optimizer = None
     if args.optimizer is not None:
-        import torch
         if args.optimizer == "adam":
-            from functools import partial
             optimizer = partial(torch.optim.Adam, lr=resolved_lr)
         elif args.optimizer == "sgd":
-            from functools import partial
             optimizer = partial(torch.optim.SGD, lr=resolved_lr)
         elif args.optimizer == "adamw":
-            from functools import partial
             optimizer = partial(torch.optim.AdamW, lr=resolved_lr)
     else:
         optimizer = defaults.get('optimizer')

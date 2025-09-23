@@ -47,7 +47,7 @@ separatrix_locator = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["*"]
+include = ["separatrix_locator", "separatrix_locator.*"]
 
 [project.scripts]
-separatrix-locator = "cli:main"
+separatrix-locator = "separatrix_locator.cli:main"

@@ -1,7 +1,7 @@
-from src.core.models import ResNet
-from src.distributions import MultivariateGaussian, multiscaler
-from src.dynamics import FlipFlop1Bit2D
-from src.dynamics.rnn import GRU_RNN, get_autonomous_dynamics_from_model, discrete_to_continuous, set_model_with_checkpoint
+from separatrix_locator.core.models import ResNet
+from separatrix_locator.distributions import MultivariateGaussian, multiscaler
+from separatrix_locator.dynamics import FlipFlop1Bit2D
+from separatrix_locator.dynamics.rnn import GRU_RNN, get_autonomous_dynamics_from_model, discrete_to_continuous, set_model_with_checkpoint
 from pathlib import Path
 from configs.base import *
 import torch

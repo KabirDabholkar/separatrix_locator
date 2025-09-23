@@ -1,8 +1,8 @@
-from src.core.models import ResNet
-from src.distributions import MultivariateGaussian, multiscaler
-from src.dynamics import Bistable2D
+from separatrix_locator.core.models import ResNet
+from separatrix_locator.distributions import MultivariateGaussian, multiscaler
+from separatrix_locator.dynamics import Bistable2D
 from pathlib import Path
-from configs.base import *
+from base import *
 
 dim = 2
 

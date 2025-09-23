@@ -43,17 +43,16 @@ class DynamicalSystem(ABC):
         """
         pass
     
-    @abstractmethod
-    def get_attractors(self) -> torch.Tensor:
+    def get_attractors(self) -> Optional[torch.Tensor]:
         """
-        Get the fixed points/attractors of the system.
+        Get the fixed points/attractors of the system, if available.
         
         Returns:
         --------
-        torch.Tensor
-            Attractor points of shape (num_attractors, dim)
+        Optional[torch.Tensor]
+            Attractor points of shape (num_attractors, dim) if defined, else None
         """
-        pass
+        raise NotImplementedError("This system does not define attractors")
     
     def sample_initial_conditions(self, distribution: torch.distributions.Distribution, batch_size: int) -> torch.Tensor:
         """

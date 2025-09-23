@@ -199,7 +199,7 @@ def eval_loss(
 
 def train_with_logger(
         model, F, dists, external_input_dist=None, dist_requires_dim=True, num_epochs=1000,
-        batch_size=64,
+        batch_size=512,
         dynamics_dim=1, decay_module=None, logger=None, lr_scheduler=None,
         eigenvalue=1.0, print_every_num_epochs=10, device='cpu', param_specific_hyperparams=[],
         normaliser=partial(shuffle_normaliser, axis=None, return_terms=True),
@@ -213,8 +213,8 @@ def train_with_logger(
         fixed_external_inputs=None,
         epoch_callbacks=[],
         dist_weights=None,
-        balance_loss_lambda=0.0,
-        RHS_function='lambda x: x',
+        balance_loss_lambda=0.01,
+        RHS_function='lambda psi: psi-psi**3',
 ):
     if len(param_specific_hyperparams) == 0:
         param_specific_hyperparams = model.parameters()
