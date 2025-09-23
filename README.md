@@ -15,7 +15,7 @@ pip install -e .
 ```
 
 ### CUDA (GPU) users
-Install the correct CUDA-enabled PyTorch first using the PyTorch wheel index, then install this package.
+Install [the correct CUDA-enabled PyTorch](https://pytorch.org/get-started/locally/) first using the PyTorch wheel index, then install this package.
 
 Examples:
 ```bash
