@@ -93,10 +93,10 @@ locator = SeparatrixLocator(
     verbose=True,
 )
 
-# Choose a sampling distribution for initial conditions (mean 0, std 1)
+# Choose a sampling distribution on which to train
 distribution = torch.distributions.Uniform(low=torch.tensor([-4.0]), high=torch.tensor([4.0]))
 
-# Train models to learn Koopman eigenfunctions
+# Train models to approximate Koopman eigenfunctions
 locator.fit(dynamical_function, distribution)
 ```
 
