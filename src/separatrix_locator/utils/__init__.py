@@ -13,6 +13,8 @@ from .helpers import (
     restrict_to_distribution_loss, gmm_sample_from_residuals, reset_adam_momentum,
     train_model_on_trajectories_sgd, BistableKEF, compute_loss
 )
+from .odeint_utils import add_t_arg_to_dynamical_function, run_odeint_to_final
+from separatrix_locator.core.separatrix_point import find_separatrix_point_along_line, find_saddle_point
 
 __all__ = [
     "plot_trajectories",
@@ -35,4 +37,8 @@ __all__ = [
     "train_model_on_trajectories_sgd",
     "BistableKEF",
     "compute_loss",
+    "add_t_arg_to_dynamical_function",
+    "run_odeint_to_final",
+    "find_separatrix_point_along_line",
+    "find_saddle_point",
 ]

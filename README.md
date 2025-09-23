@@ -1,6 +1,6 @@
 # Separatrix Locator
 
-A Python package for locating separatrices in black-box dynamical systems using Koopman eigenfunctions.
+A Python package for locating separatrices in black-box dynamical systems using Koopman eigenfunctions from the paper: [*Finding separatrices of dynamical flows with Deep Koopman Eigenfunctions*](https://arxiv.org/abs/2505.15231).
 
 ## Installation
 
@@ -28,46 +28,28 @@ pip install -e .
 
 Tip: you can set `PIP_INDEX_URL` to the PyTorch CUDA index in your environment or `pip.conf` to make CUDA selection persistent.
 
-## Run baselines
+## Baselines experiments included in the repo
+To run the experiments, run the following:
 
 ```bash
-python -m experiments.simple_experiment configs/bistable2d.py
+python experiments/simple_experiment.py configs/[config_name].py
 ```
 
-```bash
-python -m experiments.simple_experiment configs/duffing.py
+- **``configs/bistable2d.py``**: Simple 2D bistable system.
+```math
+\dot x = x - x^3 \\
+\dot y = -y
 ```
 
-## Quick Start
-
-```python
-from separatrix_locator.core.separatrix_locator import SeparatrixLocator
-from separatrix_locator.dynamics import Bistable1D
-from separatrix_locator.core.models import ResNet
-
-# Create a simple bistable system
-dynamics = Bistable1D()
-
-# Set up the separatrix locator
-locator = SeparatrixLocator(
-    dynamics_dim=dynamics.dim,
-    model_class=ResNet,
-)
-
-# Train the models
-locator.fit(dynamics.function, dynamics.distribution)
-
-# Find the separatrix
-locator.prepare_models_for_gradient_descent(dynamics.distribution)
-trajectories, separatrix_points = locator.find_separatrix(dynamics.distribution)
+- **``configs/duffing.py``**: Classic 2D nonlinear bistable oscillator 
+```math
+\dot x = -y \\
+\dot y = x - x^3
 ```
 
-## Experiments included in the repo
+- **``configs/1bitflipflop2D.py``**: 2-unit RNN trained to do 2-bit flip with bistable dynamics. Pre-trained params included in repository.
 
-- **Bistable2D**: $$\begin{align*}\dot x &= x-x^3\\ \dot y &= -y\end{align*}$$
-- **Duffing Oscillator**: Classic 2D nonlinear bistable oscillator $$\begin{align*}\dot x &= -y\\ \dot y &= x-x^3\end{align*}$$
-- **2D GRU RNN, 1 bit flop flop**: 2-unit RNN trained to do 2-bit flip with bistable dynamics.
-
+Resulting figures and models are saved in `results`.
 
 ## Model Architectures
 
@@ -78,7 +60,7 @@ from separatrix_locator.core.models import ResNet
 - **RBF**: Radial basis functions
 
 
-## Implement a custom dynamical system
+## Quick start:
 
 Example: Learning a the Koopman eigenfuncion for a 1D system with $\dot x = \sin(x)$, implemented by inheriting from `separatix_locator/dynamics/base.py`'s `DynamicalSystem`:
 
