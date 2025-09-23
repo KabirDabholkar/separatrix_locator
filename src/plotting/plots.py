@@ -10,19 +10,21 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 # Prefer a non-interactive backend to avoid teardown crashes unless overridden
-if not os.environ.get("MPLBACKEND"):
-    try:
-        matplotlib.use("Agg")
-    except Exception:
-        pass
+# if not os.environ.get("MPLBACKEND"):
+#     try:
+#         matplotlib.use("Agg")
+#     except Exception:
+#         pass
 
 # Disable LaTeX by default; enable with USE_TEX=1 if needed
-use_tex = os.environ.get("USE_TEX", "0") == "1"
+# use_tex = os.environ.get("USE_TEX", "0") == "1"
+use_tex = True
 plt.rcParams['text.usetex'] = use_tex
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["mathtext.fontset"] = "dejavuserif"
 if use_tex:
-    plt.rcParams['text.latex.preamble'] = r'\\usepackage{amsmath}'
+    # plt.rcParams['text.latex.preamble'] = r'\\usepackage{amsmath}'
+    pass
 
 
 def meshgrid_xy(x: torch.Tensor, y: torch.Tensor):

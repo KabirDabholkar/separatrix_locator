@@ -8,6 +8,7 @@ separatrix locator, from simple 1D bistable systems to complex neural circuits.
 from .base import DynamicalSystem
 from .bistableND import BistableND
 from .duffing import DuffingOscillator
+from .flipflop import FlipFlop1Bit2D, FlipFlop2Bit2D
 
 # Backward-compatible shims for previous class names
 class Bistable1D(BistableND):
@@ -31,4 +32,6 @@ __all__ = [
     "Bistable2D", 
     "Bistable3D",
     "DuffingOscillator",
+    "FlipFlop1Bit2D",
+    "FlipFlop2Bit2D",
 ]

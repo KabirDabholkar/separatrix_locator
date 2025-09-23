@@ -88,7 +88,8 @@ def run_simple_experiment(
     x_limits: tuple = (-2, 2),
     y_limits: tuple = (-2, 2),
     plot_histograms_before_training: bool = False,
-    plot_histograms_after_training: bool = True
+    plot_histograms_after_training: bool = True,
+    strict_no_fit: bool = False
 ) -> tuple:
     """
     Run a complete separatrix locator experiment.
@@ -180,7 +181,18 @@ def run_simple_experiment(
         if verbose:
             print("Pre-training histograms generated")
     
-    if train_models:
+    if strict_no_fit:
+        if verbose:
+            print("No-fit mode: skipping training and not calling .fit()")
+            print("Attempting to load pre-trained models (if available)...")
+        try:
+            locator.load_models(save_dir)
+            if verbose:
+                print("Pre-trained models loaded")
+        except FileNotFoundError:
+            if verbose:
+                print("No pre-trained models found. Proceeding without training.")
+    elif train_models:
         if verbose:
             print("Training models...")
         # Train models
@@ -297,14 +309,14 @@ def main():
     parser.add_argument(
         "--epochs", 
         type=int, 
-        default=1000,
-        help="Number of training epochs (default: 1000)"
+        default=None,
+        help="Number of training epochs (default: from config or 1000)"
     )
     parser.add_argument(
         "--learning-rate", 
         type=float, 
-        default=1e-3,
-        help="Learning rate (default: 1e-3)"
+        default=None,
+        help="Learning rate (default: from config or 1e-3)"
     )
     parser.add_argument(
         "--optimizer",
@@ -316,8 +328,8 @@ def main():
     parser.add_argument(
         "--batch-size", 
         type=int, 
-        default=128,
-        help="Batch size (default: 128)"
+        default=None,
+        help="Batch size (default: from config or 128)"
     )
     parser.add_argument(
         "--rhs-function",
@@ -364,6 +376,11 @@ def main():
         help="Don't plot model output histograms after training (default: plot after training)"
     )
     parser.add_argument(
+        "--no-fit",
+        action="store_true",
+        help="Skip training entirely; never call .fit() even if no pre-trained models exist"
+    )
+    parser.add_argument(
         "--x-limits", 
         nargs=2, 
         type=float, 
@@ -396,6 +413,9 @@ def main():
     resolved_lr = args.learning_rate if args.learning_rate is not None else (defaults.get('learning_rate') if defaults.get('learning_rate') is not None else 1e-3)
     resolved_rhs = args.rhs_function if args.rhs_function is not None else (defaults.get('RHS_function') if defaults.get('RHS_function') is not None else "lambda phi: phi-phi**3")
     resolved_balance_lambda = args.balance_loss_lambda if args.balance_loss_lambda is not None else (defaults.get('balance_loss_lambda') if defaults.get('balance_loss_lambda') is not None else 0.0)
+    # Resolve plot limits: CLI > config defaults > built-in defaults
+    resolved_x_limits = tuple(args.x_limits) if args.x_limits is not None else (defaults.get('x_limits') if defaults.get('x_limits') is not None else (-2, 2))
+    resolved_y_limits = tuple(args.y_limits) if args.y_limits is not None else (defaults.get('y_limits') if defaults.get('y_limits') is not None else (-2, 2))
 
     # Resolve optimizer
     optimizer = None
@@ -429,10 +449,11 @@ def main():
         verbose=args.verbose,
         train_models=args.train,
         show_plots=not args.no_plots,
-        x_limits=(-2, 2),  # Default limits
-        y_limits=(-2, 2),  # Default limits
+        x_limits=resolved_x_limits,
+        y_limits=resolved_y_limits,
         plot_histograms_before_training=args.plot_histograms_before,
-        plot_histograms_after_training=not args.no_histograms_after
+        plot_histograms_after_training=not args.no_histograms_after,
+        strict_no_fit=args.no_fit
     )
     
     print(f"\nExperiment completed successfully!")
