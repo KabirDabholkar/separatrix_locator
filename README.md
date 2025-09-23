@@ -100,4 +100,22 @@ distribution = torch.distributions.Uniform(low=torch.tensor([-4.0]), high=torch.
 locator.fit(dynamical_function, distribution)
 ```
 
+### The `RHS_function`
+Original implementation solves $\nabla \psi(x)\cdot f(x)= \lambda \psi(x)$, 
+```python
+rhs_function = 'lambda psi: psi'
+```
 
+Squashed implementation solves $\nabla \psi(x)\cdot f(x)= \lambda (\psi(x) - \psi(x)^3)$
+```python
+rhs_function = 'lambda psi: psi-psi**3'
+```
+This is provided as an kwarg to `locator.fit`.
+```python
+locator.fit(
+    dynamical_function,
+    distribution,
+    RHS_function = rhs_function
+)
+```
+The default is the latter.
