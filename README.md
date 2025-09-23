@@ -41,19 +41,17 @@ python -m experiments.simple_experiment configs/duffing.py
 ## Quick Start
 
 ```python
-from src.core.separatrix_locator import SeparatrixLocator
-from src.dynamics import Bistable1D
-from src.core.models import ResNet
+from separatrix_locator.core.separatrix_locator import SeparatrixLocator
+from separatrix_locator.dynamics import Bistable1D
+from separatrix_locator.core.models import ResNet
 
 # Create a simple bistable system
 dynamics = Bistable1D()
 
 # Set up the separatrix locator
 locator = SeparatrixLocator(
-    num_models=5,
     dynamics_dim=dynamics.dim,
     model_class=ResNet,
-    epochs=500
 )
 
 # Train the models
@@ -64,62 +62,58 @@ locator.prepare_models_for_gradient_descent(dynamics.distribution)
 trajectories, separatrix_points = locator.find_separatrix(dynamics.distribution)
 ```
 
-## Dynamical Systems
+## Experiments included in the repo
 
-- **Bistable Systems**: 1D, 2D, and 3D systems with two stable fixed points
-- **Duffing Oscillator**: Classic nonlinear oscillator
-- **Custom Systems**: Inherit from `DynamicalSystem` base class
+- **Bistable2D**: $$\begin{align*}\dot x &= x-x^3\\ \dot y &= -y\end{align*}$$
+- **Duffing Oscillator**: Classic 2D nonlinear bistable oscillator $$\begin{align*}\dot x &= -y\\ \dot y &= x-x^3\end{align*}$$
+- **2D GRU RNN, 1 bit flop flop**: 2-unit RNN trained to do 2-bit flip with bistable dynamics.
+
 
 ## Model Architectures
 
-- **ResNet**: Residual network with skip connections
+- **ResNet**: Residual network with skip connections,
+```python
+from separatrix_locator.core.models import ResNet
+```
 - **RBF**: Radial basis functions
 
 
 ## Implement a custom dynamical system
 
-Example: 1D system with \(\dot x = x - x^3\), implemented by inheriting from `src/dynamics/base.py`'s `DynamicalSystem`:
+Example: Learning a the Koopman eigenfuncion for a 1D system with $\dot x = \sin(x)$, implemented by inheriting from `separatix_locator/dynamics/base.py`'s `DynamicalSystem`:
 
 ```python
 import torch
-from src.dynamics.base import DynamicalSystem
+from torch import nn
 
-class CubicBistable1D(DynamicalSystem):
-    def __init__(self):
-        super().__init__(dim=1, name="CubicBistable1D")
+from separatrix_locator.dynamics.base import DynamicalSystem
+from separatrix_locator.core.separatrix_locator import SeparatrixLocator
 
-    def function(self, x: torch.Tensor) -> torch.Tensor:
-        # x shape: (batch, 1)
-        return x - x ** 3
+# Define the dynamics as a torch function
+dynamical_function = torch.sin 
 
-    def get_attractors(self) -> torch.Tensor:
-        # Stable fixed points at x = -1 and x = 1
-        return torch.tensor([[-1.0], [1.0]], dtype=torch.float32)
+# Define Neural network architecture to approximate the Koopman Eigenfunction
+model = nn.Sequential(
+    nn.Linear(1, 100),
+    nn.Tanh(),
+    nn.Linear(100, 100),
+    nn.Tanh(),
+    nn.Linear(100, 1)
+)
 
+# Define Separatix Locator object, providing the model a kwarg.
+locator = SeparatrixLocator(
+    dynamics_dim=1,
+    models=[model], # provide a list of models. Even if just one. 
+    epochs=200, # training epochs (same as steps)
+    verbose=True,
+)
 
-# Usage with the SeparatrixLocator
-if __name__ == "__main__":
-    from src.core.separatrix_locator import SeparatrixLocator
-    from src.core.models import ResNet
+# Choose a sampling distribution for initial conditions (mean 0, std 1)
+distribution = torch.distributions.Uniform(low=torch.tensor([-4.0]), high=torch.tensor([4.0]))
 
-    dynamics = CubicBistable1D()
-
-    locator = SeparatrixLocator(
-        num_models=3,
-        dynamics_dim=dynamics.dim,
-        model_class=ResNet,
-        epochs=200,
-    )
-
-    # Choose a sampling distribution for initial conditions (mean 0, std 1)
-    init_dist = torch.distributions.Normal(loc=torch.tensor([0.0]), scale=torch.tensor([1.0]))
-
-    # Train models to learn Koopman eigenfunctions
-    locator.fit(dynamics.function, init_dist)
-
-    # Prepare for gradient-based refinement and find separatrix
-    locator.prepare_models_for_gradient_descent(init_dist)
-    trajectories, separatrix_points = locator.find_separatrix(init_dist)
+# Train models to learn Koopman eigenfunctions
+locator.fit(dynamical_function, distribution)
 ```
 
 

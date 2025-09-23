@@ -46,7 +46,7 @@ class SeparatrixLocator(BaseEstimator):
     
     def __init__(
         self, 
-        num_models: int = 10, 
+        num_models: int = 1, 
         dynamics_dim: int = 1,
         models: Optional[List[nn.Module]] = None,
         lr: float = 1e-4, 
