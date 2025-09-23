@@ -211,7 +211,8 @@ def runGD(
     num_steps=100, partial_optim=partial(torch.optim.Adam, lr=1e-2), batch_size=64,
     threshold=5e-2, lr_scheduler=None, resample_above_threshold=False,
     optimize_initial_conditions=True, optimize_external_inputs=False,
-    return_indices=False, return_mask=False, save_trajectories_every=10000
+    return_indices=False, return_mask=False, save_trajectories_every=10000,
+    device: Optional[Union[str, torch.device]] = None
 ):
     """
     Advanced gradient descent optimization for finding separatrices with distribution sampling.
@@ -305,6 +306,23 @@ def runGD(
     below_threshold_points = []
     below_threshold_indices = []
 
+    # Determine target device
+    if device is not None:
+        target_device = torch.device(device)
+    else:
+        # Infer from func/model if possible
+        if hasattr(func, 'func') and hasattr(func.func, 'parameters'):
+            target_device = next(func.func.parameters()).device
+        elif hasattr(func, 'parameters'):
+            target_device = next(func.parameters()).device
+        else:
+            target_device = torch.device('cpu')
+
+    # Move tensors to target device
+    initial_conditions = initial_conditions.to(target_device)
+    if external_inputs is not None:
+        external_inputs = external_inputs.to(target_device)
+
     for step in range(num_steps):
         optimizer.zero_grad()
 
@@ -315,18 +333,7 @@ def runGD(
             inputs = initial_conditions
         
         # Ensure inputs are on the correct device
-        # Get device from the function (which should be a model)
-        if hasattr(func, 'func') and hasattr(func.func, 'parameters'):
-            # This is a composed function, get the device from the inner function
-            model_device = next(func.func.parameters()).device
-        elif hasattr(func, 'parameters'):
-            # This is a model directly
-            model_device = next(func.parameters()).device
-        else:
-            # Default to CPU if we can't determine the device
-            model_device = torch.device('cpu')
-        
-        inputs = inputs.to(model_device)
+        inputs = inputs.to(target_device)
         losses = func(inputs)
         loss = losses.sum()
         loss.backward()

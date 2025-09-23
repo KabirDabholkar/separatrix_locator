@@ -202,7 +202,7 @@ def train_with_logger(
         batch_size=64,
         dynamics_dim=1, decay_module=None, logger=None, lr_scheduler=None,
         eigenvalue=1.0, print_every_num_epochs=10, device='cpu', param_specific_hyperparams=[],
-        normaliser=partial(variance_normaliser, axis=None, return_terms=True),
+        normaliser=partial(shuffle_normaliser, axis=None, return_terms=True),
         verbose=False,
         restrict_to_distribution_lambda=0,
         ext_inp_batch_size=None,

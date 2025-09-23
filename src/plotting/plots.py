@@ -6,7 +6,32 @@ from typing import Callable, Optional, Tuple
 
 import numpy as np
 import torch
+import matplotlib
 import matplotlib.pyplot as plt
+
+# Prefer a non-interactive backend to avoid teardown crashes unless overridden
+if not os.environ.get("MPLBACKEND"):
+    try:
+        matplotlib.use("Agg")
+    except Exception:
+        pass
+
+# Disable LaTeX by default; enable with USE_TEX=1 if needed
+use_tex = os.environ.get("USE_TEX", "0") == "1"
+plt.rcParams['text.usetex'] = use_tex
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["mathtext.fontset"] = "dejavuserif"
+if use_tex:
+    plt.rcParams['text.latex.preamble'] = r'\\usepackage{amsmath}'
+
+
+def meshgrid_xy(x: torch.Tensor, y: torch.Tensor):
+    """Create a meshgrid with XY indexing, compatible with older torch versions."""
+    try:
+        return torch.meshgrid(x, y, indexing='xy')
+    except TypeError:
+        X, Y = torch.meshgrid(x, y)
+        return X.t(), Y.t()
 
 
 def remove_frame(ax):
@@ -20,7 +45,7 @@ def evaluate_on_grid(func: Callable[[torch.Tensor], torch.Tensor],
                      resolution: int = 200):
     x = torch.linspace(x_limits[0], x_limits[1], resolution)
     y = torch.linspace(y_limits[0], y_limits[1], resolution)
-    X, Y = torch.meshgrid(x, y, indexing='xy')
+    X, Y = meshgrid_xy(x, y)
     XY = torch.stack([X.reshape(-1), Y.reshape(-1)], dim=-1)
     with torch.no_grad():
         Z = func(XY).reshape(resolution, resolution)
@@ -50,7 +75,7 @@ def plot_flow_streamlines(dynamics_function: Callable[[torch.Tensor], torch.Tens
 
     x = torch.linspace(x_limits[0], x_limits[1], resolution)
     y = torch.linspace(y_limits[0], y_limits[1], resolution)
-    X, Y = torch.meshgrid(x, y, indexing='xy')
+    X, Y = meshgrid_xy(x, y)
     XY = torch.stack([X.reshape(-1), Y.reshape(-1)], dim=-1)
     with torch.no_grad():
         dXY = dynamics_function(XY)
@@ -173,6 +198,120 @@ def plot_dynamics_2D(dynamics_function: Callable[[torch.Tensor], torch.Tensor],
         Path(save_dir).mkdir(parents=True, exist_ok=True)
         fig.savefig(Path(save_dir) / 'results2D.png', dpi=300)
         fig.savefig(Path(save_dir) / 'results2D.pdf')
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def plot_model_output_histograms(
+    models: list,
+    distributions: list,
+    device: str = "cpu",
+    num_samples: int = 1000,
+    save_dir: Optional[str] = None,
+    show: bool = True,
+    title_prefix: str = "Model Output Histograms"
+):
+    """
+    Plot histograms of model outputs for different distributions.
+    
+    Parameters:
+    -----------
+    models : list
+        List of trained models to evaluate
+    distributions : list
+        List of distributions to sample from
+    device : str
+        Device to use for model evaluation
+    num_samples : int
+        Number of samples to draw from each distribution
+    save_dir : Optional[str]
+        Directory to save the plot
+    show : bool
+        Whether to display the plot
+    title_prefix : str
+        Prefix for the plot title
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    
+    num_distributions = len(distributions)
+    num_models = len(models)
+    
+    # Create subplots: one row per distribution, one column per model
+    fig, axes = plt.subplots(num_distributions, num_models, 
+                            figsize=(4 * num_models, 3 * num_distributions))
+    
+    # Handle single model/distribution case
+    if num_models == 1 and num_distributions == 1:
+        axes = [[axes]]
+    elif num_models == 1:
+        axes = [[ax] for ax in axes]
+    elif num_distributions == 1:
+        axes = [axes]
+    
+    # Sample from each distribution and evaluate models
+    for dist_idx, dist in enumerate(distributions):
+        # Sample points from distribution
+        if hasattr(dist, 'sample'):
+            # Handle torch distributions
+            samples = dist.sample((num_samples,))
+        else:
+            # Handle custom distributions with call method
+            samples = dist(num_samples)
+        
+        # Move to device
+        samples = samples.to(device)
+        
+        for model_idx, model in enumerate(models):
+            ax = axes[dist_idx][model_idx]
+            
+            # Get model predictions
+            with torch.no_grad():
+                model.eval()
+                outputs = model(samples)
+                outputs_np = outputs.cpu().numpy().flatten()
+            
+            # Plot histogram
+            ax.hist(outputs_np, bins=50, alpha=0.7, density=True, edgecolor='black', linewidth=0.5)
+            
+            # Customize subplot
+            ax.set_xlabel('Model Output')
+            ax.set_ylabel('Density')
+            
+            # Set title with distribution info
+            dist_name = getattr(dist, 'name', f'Dist {dist_idx}')
+            if hasattr(dist, 'scales') and len(dist.scales) > 0:
+                # For multiscale distributions, show the scale
+                scale = dist.scales[dist_idx] if hasattr(dist.scales, '__getitem__') else dist.scales
+                ax.set_title(f'{dist_name}\nScale: {scale:.2f}')
+            else:
+                ax.set_title(f'{dist_name}')
+            
+            # Add statistics text
+            mean_val = np.mean(outputs_np)
+            std_val = np.std(outputs_np)
+            ax.text(0.05, 0.95, f'mean={mean_val:.3f}\nstd={std_val:.3f}', 
+                   transform=ax.transAxes, verticalalignment='top',
+                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            
+            # Remove frame
+            remove_frame(ax)
+    
+    # Set overall title
+    fig.suptitle(f'{title_prefix}\n({num_models} models × {num_distributions} distributions)', 
+                 fontsize=14, y=0.98)
+    
+    plt.tight_layout()
+    
+    # Save plot
+    if save_dir is not None:
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+        filename = title_prefix.lower().replace(' ', '_').replace('\n', '_')
+        fig.savefig(Path(save_dir) / f'{filename}.png', dpi=300, bbox_inches='tight')
+        fig.savefig(Path(save_dir) / f'{filename}.pdf', bbox_inches='tight')
+    
     if show:
         plt.show()
     else:

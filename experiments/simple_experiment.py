@@ -14,11 +14,10 @@ import argparse
 import torch
 import torch.nn as nn
 
-# Add the src directory to the path so we can import separatrix_locator
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
+# Import from the separatrix_locator package
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.core.separatrix_locator import SeparatrixLocator
-from src.plotting.plots import plot_dynamics_2D
+from src.plotting.plots import plot_dynamics_2D, plot_model_output_histograms
 
 
 def load_config(config_path: str):
@@ -55,8 +54,20 @@ def load_config(config_path: str):
     
     # Get save_dir if defined in config, otherwise None
     save_dir = getattr(config_module, 'save_dir', None)
+
+    # Optional default hyperparameters from config (which can import configs.base)
+    defaults = {
+        'epochs': getattr(config_module, 'epochs', None),
+        'batch_size': getattr(config_module, 'batch_size', None),
+        'learning_rate': getattr(config_module, 'learning_rate', None),
+        'optimizer': getattr(config_module, 'optimizer', None),
+        'RHS_function': getattr(config_module, 'RHS_function', None),
+        'balance_loss_lambda': getattr(config_module, 'balance_loss_lambda', None),
+        'x_limits': getattr(config_module, 'x_limits', None),
+        'y_limits': getattr(config_module, 'y_limits', None),
+    }
     
-    return config_module.dynamics, model_or_models, config_module.dists, save_dir
+    return config_module.dynamics, model_or_models, config_module.dists, save_dir, defaults
 
 
 def run_simple_experiment(
@@ -67,12 +78,17 @@ def run_simple_experiment(
     epochs: int = 100,
     learning_rate: float = 1e-3,
     batch_size: int = 1000,
+    optimizer: Optional[Callable] = None,
+    rhs_function: str = "lambda phi: phi-phi**3",
+    balance_loss_lambda: float = 0.0,
     device: str = "cpu",
     verbose: bool = True,
     train_models: bool = False,
     show_plots: bool = True,
     x_limits: tuple = (-2, 2),
-    y_limits: tuple = (-2, 2)
+    y_limits: tuple = (-2, 2),
+    plot_histograms_before_training: bool = False,
+    plot_histograms_after_training: bool = True
 ) -> tuple:
     """
     Run a complete separatrix locator experiment.
@@ -105,6 +121,10 @@ def run_simple_experiment(
         X-axis limits for plotting
     y_limits : tuple
         Y-axis limits for plotting
+    plot_histograms_before_training : bool
+        Whether to plot model output histograms before training
+    plot_histograms_after_training : bool
+        Whether to plot model output histograms after training
         
     Returns:
     --------
@@ -145,6 +165,21 @@ def run_simple_experiment(
     # Create save directory
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     
+    # Plot histograms before training if requested
+    if plot_histograms_before_training:
+        if verbose:
+            print("Plotting model output histograms before training...")
+        plot_model_output_histograms(
+            models=locator.models,
+            distributions=dists,
+            device=device,
+            save_dir=save_dir,
+            show=show_plots,
+            title_prefix="Model Output Histograms (Before Training)"
+        )
+        if verbose:
+            print("Pre-training histograms generated")
+    
     if train_models:
         if verbose:
             print("Training models...")
@@ -154,8 +189,9 @@ def run_simple_experiment(
             dists, 
             batch_size=batch_size, 
             eigenvalue=1.0,  # Default eigenvalue
-            balance_loss_lambda=0.0,  # Default balance loss
-            RHS_function="lambda phi: phi-phi**3"
+            balance_loss_lambda=balance_loss_lambda,
+            RHS_function=rhs_function,
+            **({ 'optimizer': optimizer } if optimizer is not None else {})
         )
         locator.save_models(save_dir)
         if verbose:
@@ -176,12 +212,28 @@ def run_simple_experiment(
                 dists, 
                 batch_size=batch_size, 
                 eigenvalue=1.0,
-                balance_loss_lambda=0.0,
-                RHS_function="lambda phi: phi-phi**3"
+                balance_loss_lambda=balance_loss_lambda,
+                RHS_function=rhs_function,
+                **({ 'optimizer': optimizer } if optimizer is not None else {})
             )
             locator.save_models(save_dir)
             if verbose:
                 print("Models trained and saved")
+    
+    # Plot histograms after training if requested
+    if plot_histograms_after_training:
+        if verbose:
+            print("Plotting model output histograms after training...")
+        plot_model_output_histograms(
+            models=locator.models,
+            distributions=dists,
+            device=device,
+            save_dir=save_dir,
+            show=show_plots,
+            title_prefix="Model Output Histograms (After Training)"
+        )
+        if verbose:
+            print("Post-training histograms generated")
     
     # Generate plots
     if verbose:
@@ -255,10 +307,29 @@ def main():
         help="Learning rate (default: 1e-3)"
     )
     parser.add_argument(
+        "--optimizer",
+        type=str,
+        choices=["adam", "sgd", "adamw"],
+        default=None,
+        help="Optimizer to use (default: from config; options: adam, sgd, adamw)"
+    )
+    parser.add_argument(
         "--batch-size", 
         type=int, 
         default=128,
         help="Batch size (default: 128)"
+    )
+    parser.add_argument(
+        "--rhs-function",
+        type=str,
+        default=None,
+        help="Right-hand side function of phi as a Python lambda string (default from config)"
+    )
+    parser.add_argument(
+        "--balance-loss-lambda",
+        type=float,
+        default=None,
+        help="Coefficient for balance loss regularization (default from config)"
     )
     parser.add_argument(
         "--device", 
@@ -282,12 +353,36 @@ def main():
         action="store_true", 
         help="Enable verbose output"
     )
+    parser.add_argument(
+        "--plot-histograms-before", 
+        action="store_true", 
+        help="Plot model output histograms before training"
+    )
+    parser.add_argument(
+        "--no-histograms-after", 
+        action="store_true", 
+        help="Don't plot model output histograms after training (default: plot after training)"
+    )
+    parser.add_argument(
+        "--x-limits", 
+        nargs=2, 
+        type=float, 
+        default=None,
+        help="X-axis limits for plotting (default: from config or (-2, 2))"
+    )
+    parser.add_argument(
+        "--y-limits", 
+        nargs=2, 
+        type=float, 
+        default=None,
+        help="Y-axis limits for plotting (default: from config or (-2, 2))"
+    )
     
     args = parser.parse_args()
     
     # Load configuration
     try:
-        dynamics, model_or_models, dists, config_save_dir = load_config(args.config)
+        dynamics, model_or_models, dists, config_save_dir, defaults = load_config(args.config)
     except Exception as e:
         print(f"Error loading config file {args.config}: {e}")
         return 1
@@ -295,33 +390,55 @@ def main():
     # Use config save_dir if provided, otherwise use command line argument
     save_dir = config_save_dir if config_save_dir is not None else args.save_dir
     
-    # Run experiment
-    try:
-        locator, results = run_simple_experiment(
-            dynamics=dynamics,
-            model_or_models=model_or_models,
-            dists=dists,
-            save_dir=save_dir,
-            epochs=args.epochs,
-            learning_rate=args.learning_rate,
-            batch_size=args.batch_size,
-            device=args.device,
-            verbose=args.verbose,
-            train_models=args.train,
-            show_plots=not args.no_plots,
-            x_limits=(-2, 2),  # Default limits
-            y_limits=(-2, 2)   # Default limits
-        )
-        
-        print(f"\nExperiment completed successfully!")
-        print(f"Results saved to: {save_dir}")
-        return 0
-        
-    except Exception as e:
-        print(f"Experiment failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return 1
+    # Determine hyperparameters with precedence: CLI > config defaults > built-in defaults
+    resolved_epochs = args.epochs if args.epochs is not None else (defaults.get('epochs') if defaults.get('epochs') is not None else 1000)
+    resolved_batch_size = args.batch_size if args.batch_size is not None else (defaults.get('batch_size') if defaults.get('batch_size') is not None else 128)
+    resolved_lr = args.learning_rate if args.learning_rate is not None else (defaults.get('learning_rate') if defaults.get('learning_rate') is not None else 1e-3)
+    resolved_rhs = args.rhs_function if args.rhs_function is not None else (defaults.get('RHS_function') if defaults.get('RHS_function') is not None else "lambda phi: phi-phi**3")
+    resolved_balance_lambda = args.balance_loss_lambda if args.balance_loss_lambda is not None else (defaults.get('balance_loss_lambda') if defaults.get('balance_loss_lambda') is not None else 0.0)
+
+    # Resolve optimizer
+    optimizer = None
+    if args.optimizer is not None:
+        import torch
+        if args.optimizer == "adam":
+            from functools import partial
+            optimizer = partial(torch.optim.Adam, lr=resolved_lr)
+        elif args.optimizer == "sgd":
+            from functools import partial
+            optimizer = partial(torch.optim.SGD, lr=resolved_lr)
+        elif args.optimizer == "adamw":
+            from functools import partial
+            optimizer = partial(torch.optim.AdamW, lr=resolved_lr)
+    else:
+        optimizer = defaults.get('optimizer')
+
+
+    locator, results = run_simple_experiment(
+        dynamics=dynamics,
+        model_or_models=model_or_models,
+        dists=dists,
+        save_dir=save_dir,
+        epochs=resolved_epochs,
+        learning_rate=resolved_lr,
+        batch_size=resolved_batch_size,
+        optimizer=optimizer,
+        rhs_function=resolved_rhs,
+        balance_loss_lambda=resolved_balance_lambda,
+        device=args.device,
+        verbose=args.verbose,
+        train_models=args.train,
+        show_plots=not args.no_plots,
+        x_limits=(-2, 2),  # Default limits
+        y_limits=(-2, 2),  # Default limits
+        plot_histograms_before_training=args.plot_histograms_before,
+        plot_histograms_after_training=not args.no_histograms_after
+    )
+    
+    print(f"\nExperiment completed successfully!")
+    print(f"Results saved to: {save_dir}")
+    return 0
+
 
 
 if __name__ == "__main__":

@@ -11,12 +11,14 @@ authors = [{ name = "Your Name" }]
 license = { file = "LICENSE" }
 requires-python = ">=3.8"
 dependencies = [
-  "torch>=1.9.0",
-  "numpy>=1.21.0",
-  "matplotlib>=3.3.0",
-  "seaborn>=0.11.0",
-  "scikit-learn>=1.0.0",
-  "torchdiffeq>=0.2.0"
+  # NumPy 2.x breaks some compiled extensions; pin <2 for now
+  "numpy>=1.21,<2",
+  # Pin torch below 2.2 to avoid NumPy 2 coupling; Python 3.9 compatible
+  "torch>=1.13,<2.2",
+  "matplotlib",
+  "seaborn",
+  "scikit-learn",
+  "torchdiffeq"
 ]
 
 [project.optional-dependencies]

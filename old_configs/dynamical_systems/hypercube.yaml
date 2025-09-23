@@ -1,0 +1,42 @@
+function :
+  _target_  : compose.compose
+  _args_    :
+    - ${eval:'lambda x:x-x**3'}
+
+#######
+IC_distribution_fit :
+  - ${..IC_distribution}
+#  - ${..IC_interpolation_line}
+
+#######
+
+IC_distribution:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : 0
+    scale     : 1
+  dim : ${..dim}
+dist_requires_dim : false
+
+
+IC_interpolation_line:
+  _target_  : custom_distributions.singlePC_distribution_from_hidden
+  hidden    : ${..hidden_axis}
+  component_id  : 0
+  squeeze_first_two_dims  : false
+  multiply_scale : 1.0  #0.5
+
+hidden_axis:
+  _target_  : custom_distributions.get_stacked_one_hot
+  pos       : 0
+  length    : ${..dim}
+
+name : hypercube_${.dim}D
+dim  : 2
+equation_latex  : x-x^3
+
+#analytical_eigenfunction:
+#  _target_: compose.compose
+#  _args_:
+#    - ${eval:'lambda x,y:x/((x**2-1)**2)**0.25'}

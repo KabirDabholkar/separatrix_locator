@@ -88,13 +88,16 @@ class SeparatrixLocator(BaseEstimator):
         else:
             distributions = list(distribution)
         
+        # Allow overriding the optimizer via kwargs; default to Adam(lr=self.lr)
+        optimizer_factory = kwargs.pop('optimizer', partial(torch.optim.Adam, lr=self.lr))
+
         train_single_model_ = partial(
             train_with_logger, 
             F=func, 
             dists=distributions, 
             dynamics_dim=self.dynamics_dim, 
             num_epochs=self.epochs,
-            optimizer=partial(torch.optim.Adam, lr=self.lr),
+            optimizer=optimizer_factory,
             **kwargs
         )
 
@@ -260,11 +263,18 @@ class SeparatrixLocator(BaseEstimator):
                 load_filename = f"{model.__class__.__name__}_{i}.pt"
             else:
                 load_filename = f"{filename}_{i}.pt"
-            state_dict = torch.load(
-                Path(savedir) / "models" / load_filename, 
-                weights_only=True, 
-                map_location=torch.device(self.device)
-            )
+            # Try new PyTorch API with weights_only; fallback for older versions
+            try:
+                state_dict = torch.load(
+                    Path(savedir) / "models" / load_filename,
+                    weights_only=True,
+                    map_location=torch.device(self.device),
+                )
+            except TypeError:
+                state_dict = torch.load(
+                    Path(savedir) / "models" / load_filename,
+                    map_location=torch.device(self.device),
+                )
             self.models[i].load_state_dict(state_dict)
 
     def filter_models(self, threshold: float):
@@ -418,7 +428,11 @@ class SeparatrixLocator(BaseEstimator):
         
         for f in self.functions_for_gradient_descent:
             ret = runGD(
-                f, distribution, input_dim=self.dynamics_dim, dist_needs_dim=dist_needs_dim,
+                f,
+                distribution,
+                input_dim=self.dynamics_dim,
+                dist_needs_dim=dist_needs_dim,
+                device=self.device,
                 **kwargs
             )
             all_traj.append(ret[0])

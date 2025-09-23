@@ -53,12 +53,10 @@ class ResNet(nn.Module):
         
         # Output layer
         output_layer = nn.Linear(hidden_size, output_dim)
-        if scale_last_layer_by_inv_sqrt_hidden:
-            output_layer.weight.data *= (1.0 / (hidden_size ** 0.5))
         layers.append(output_layer)
         
         self.network = nn.ModuleList(layers)
-        self.activation = nn.ReLU()
+        self.activation = nn.Tanh()
         
     def forward(self, x):
         # Input preprocessing
@@ -78,6 +76,9 @@ class ResNet(nn.Module):
             else:
                 # Output layer (no activation)
                 h = layer(h)
+                # Apply scaling during forward pass if enabled
+                if self.scale_last_layer_by_inv_sqrt_hidden:
+                    h = h * (1.0 / (self.hidden_size ** 0.5))
         
         return h
 

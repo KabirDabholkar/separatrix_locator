@@ -1,0 +1,69 @@
+function :
+  _target_  : compose.compose
+  _args_    :
+    - _target_  : torch.sin
+      _partial_ : true
+
+IC_distribution_fit:
+  # - _target_  : custom_distributions.makeIIDMultiVariate
+  #   dist  :
+  #     _target_  : torch.distributions.Uniform
+  #     low       : -0.628
+  #     high      : 0.628
+  #   dim : ${...dim}
+  # - _target_  : custom_distributions.makeIIDMultiVariate
+  #   dist  :
+  #     _target_  : torch.distributions.Uniform
+  #     low       : -3.142
+  #     high      : 3.142
+  #   dim : ${...dim}
+  - _target_  : custom_distributions.makeIIDMultiVariate
+    dist  :
+      _target_  : torch.distributions.Uniform
+      low       : -6.283
+      high      : 6.283
+    dim : ${...dim}
+
+IC_distribution:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Uniform
+    low       : -5 #4.712   # -3*pi/2
+    high      : 5 #4.712    #  3*pi/2
+  dim : ${..dim}
+
+IC_distribution_half:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Uniform
+    low       : -2.356   # -3*pi/2
+    high      : 2.356    #  3*pi/2
+  dim : ${..dim}
+
+lims:
+  x: [-4.712, 4.712]
+
+dist_requires_dim : false
+name            : bistable1D_sin
+dim  : 1
+equation_latex  : '\\sin(x)'
+
+
+plot_fixed_points:
+  - x : [3.14159265359, -3.14159265359]
+    y : [0,0]
+    marker  : o
+    color   : lightgreen
+    label   : stable fixed point
+    s       : 50
+    zorder  : 2
+  - x : [0]
+    y : [0]
+    # marker  : o
+    facecolors :  'none'
+    edgecolors :  'C1'
+    # color   : C1
+    linewidths  : 2.5
+    label   : unstable fixed point
+    s       : 100
+    zorder  : 2

@@ -7,15 +7,43 @@ A Python package for locating separatrices in black-box dynamical systems using 
 ```bash
 git clone https://github.com/KabirDabholkar/separatrix_locator.git
 cd separatrix_locator
+```
+
+### CPU-only (simple)
+```bash
 pip install -e .
+```
+
+### CUDA (GPU) users
+Install the correct CUDA-enabled PyTorch first using the PyTorch wheel index, then install this package.
+
+Examples:
+```bash
+# CUDA 11.8, PyTorch 2.4.* (adjust versions as needed)
+pip install --index-url https://download.pytorch.org/whl/cu118 torch==2.4.*
+
+# Then install this package (keeps your installed torch)
+pip install -e .
+```
+
+Tip: you can set `PIP_INDEX_URL` to the PyTorch CUDA index in your environment or `pip.conf` to make CUDA selection persistent.
+
+## Run baselines
+
+```bash
+python -m experiments.simple_experiment configs/bistable2d.py
+```
+
+```bash
+python -m experiments.simple_experiment configs/duffing.py
 ```
 
 ## Quick Start
 
 ```python
-from separatrix_locator import SeparatrixLocator
-from separatrix_locator.dynamics import Bistable1D
-from separatrix_locator.core import KoopmanEigenfunctionModel
+from src.core.separatrix_locator import SeparatrixLocator
+from src.dynamics import Bistable1D
+from src.core.models import ResNet
 
 # Create a simple bistable system
 dynamics = Bistable1D()
@@ -24,7 +52,7 @@ dynamics = Bistable1D()
 locator = SeparatrixLocator(
     num_models=5,
     dynamics_dim=dynamics.dim,
-    model_class=KoopmanEigenfunctionModel,
+    model_class=ResNet,
     epochs=500
 )
 
@@ -44,13 +72,7 @@ trajectories, separatrix_points = locator.find_separatrix(dynamics.distribution)
 
 ## Model Architectures
 
-- **KoopmanEigenfunctionModel**: Basic feedforward network
-- **ResRBF**: Residual network with skip connections
-- **LinearModel**: Simple linear baseline
-- **DeepKoopmanModel**: Deep network for complex systems
+- **ResNet**: Residual network with skip connections
+- **RBF**: Radial basis functions
 
-## Examples
 
-See `examples/` directory for tutorials:
-- `01_bistable_1d.ipynb`: Introduction with 1D system
-- `02_duffing_oscillator.ipynb`: 2D systems and phase portraits

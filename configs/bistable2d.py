@@ -2,21 +2,29 @@ from src.core.models import ResNet
 from src.distributions import MultivariateGaussian, multiscaler
 from src.dynamics import Bistable2D
 from pathlib import Path
+from configs.base import *
+
+dim = 2
+
+epochs = 1000
+batch_size = 1000
+balance_loss_lambda = 1e-2
+RHS_function = "lambda psi: psi-psi**3"
 
 dynamics = Bistable2D()
 
 model = ResNet(
-    input_dim=2,
-    hidden_size=128,
-    num_layers=20,
+    input_dim=dim,
+    hidden_size=512,
+    num_layers=12,
     output_dim=1,
     input_scale_factor=1.0,
     input_center=None,
-    scale_last_layer_by_inv_sqrt_hidden=False
+    scale_last_layer_by_inv_sqrt_hidden=True
 )
 
 dist = MultivariateGaussian(
-    dim=2,
+    dim=dim,
     mean=None,
     covariance_matrix=None
 )

@@ -1,0 +1,34 @@
+_target_: utils.setattrs_kwargs
+target:
+  _target_: architectures.AdditiveModel
+  _args_  :
+    - _target_: torch.nn.Sequential
+      _args_:
+        - _target_: learn_koopman_eig.InputCenterAndScale
+          center        : ${......input_center}
+          scale_factor  : ${......input_scale_factor}
+          trainable_scale: false
+        - _target_: architectures.DeepResNet
+          input_dim : ${......input_size}
+          hidden_dim: ${......hidden_size}
+          output_dim: ${......output_size}
+          num_blocks: ${......num_layers}
+  scale_output_by_inv_sqrt_hidden: ${..scale_last_layer_by_inv_sqrt_hidden}
+  hidden_size: ${..hidden_size}
+
+input_size  : ${dynamics.dim}
+output_size : 1
+num_kernels : 10
+input_scale_factor: 1.0
+input_center: null
+
+### For 1bit flip flop 512D
+hidden_size : 550
+num_layers  : 20
+
+name: InputCenteredAndScaled_AdditiveRBFResNet_hidden${.hidden_size}_output${.output_size}_numKernels${.num_kernels}_numlayers${.num_layers}
+
+# Optional scaling of last layer by 1/sqrt(hidden_size)
+scale_last_layer_by_inv_sqrt_hidden: true
+
+

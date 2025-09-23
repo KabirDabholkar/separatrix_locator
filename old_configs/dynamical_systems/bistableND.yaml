@@ -1,0 +1,181 @@
+function :
+  _target_  : dynamical_functions.bistable_ND
+  _partial_ : true
+  dim       : ${..dim}
+  pos       : ${..bistable_axis}
+  scale     : 1 #e-3
+
+#######
+
+#IC_distribution_fit :
+#  _target_  : custom_distributions.random_gaussians
+#  dim : ${..dim}
+#  num_distributions : 15
+#  scale_range : [0.0,0.3]
+
+IC_distribution_fit :
+#  - ${..IC_distribution}
+#  - ${..IC_distribution_hundredth}
+#  - ${..IC_distribution_hundredth}
+#  - ${..IC_distribution_hundredth}
+  - ${..IC_distribution_twentieth}
+  - ${..IC_distribution_tenth}
+  - ${..IC_distribution_fourth}
+  - ${..IC_distribution_half}
+  - ${..IC_distribution1}
+##  - ${..IC_distribution2}
+#  - ${..IC_distribution3}
+#  - ${..IC_distribution4}
+#  - ${..IC_distribution5}
+#  - ${..IC_distribution6}
+#  - ${..IC_interpolation_line}
+
+#######
+isotropic_gaussians:
+  _target_  : custom_distributions.isotropic_gaussians
+  mean      : ${..point_on_separatrix}
+#  mean      : ${..saddle_point}
+  scales    : ${..scale_range}
+
+point_on_separatrix:
+  _target_  : torch.tensor
+  data     : [0.0, 1.0]
+
+saddle_point  :
+  _target_  : separatrix_point_finder.find_saddle_point
+  dynamics_function : ${..function}
+  point_on_separatrix : ${..point_on_separatrix}
+  T : 10
+  steps : 100
+
+
+
+scale_range :
+  _target_  : numpy.array
+  object  : [1e-2] #,0.1,0.3,1.0]
+#######
+IC_distribution:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+#    _target_  : torch.distributions.Normal
+#    loc       : 0
+#    scale     : 4
+    _target_  : torch.distributions.Uniform
+    low       : -10
+    high      : 10
+  dim : ${..dim}
+
+loc : 0.0
+
+IC_distribution_hundredth:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 0.01
+  dim : ${..dim}
+
+IC_distribution_twentieth:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 0.05
+  dim : ${..dim}
+
+IC_distribution_tenth:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 0.1
+  dim : ${..dim}
+
+IC_distribution_fourth:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 0.25
+  dim : ${..dim}
+
+IC_distribution_half:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 0.5
+  dim : ${..dim}
+
+
+IC_distribution1:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 1
+  dim : ${..dim}
+
+IC_distribution2:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 2
+  dim : ${..dim}
+
+IC_distribution3:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 3
+  dim : ${..dim}
+
+IC_distribution4:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 4
+  dim : ${..dim}
+
+IC_distribution5:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 5
+  dim : ${..dim}
+
+IC_distribution6:
+  _target_  : custom_distributions.makeIIDMultiVariate
+  dist  :
+    _target_  : torch.distributions.Normal
+    loc       : ${...loc}
+    scale     : 6
+  dim : ${..dim}
+
+dist_requires_dim : false
+
+IC_interpolation_line:
+  _target_  : custom_distributions.singlePC_distribution_from_hidden
+  hidden    : ${..hidden_axis}
+  component_id  : 0
+  squeeze_first_two_dims  : false
+  multiply_scale : 2.0  #0.5
+
+hidden_axis:
+  _target_  : custom_distributions.get_stacked_one_hot
+  pos       : ${..bistable_axis}
+  length    : ${..dim}
+
+name : bistable${.dim}D #_slow${.function.scale} #_offcenter${.loc} #_random # #0.1 #${.IC_distribution.dist.scale}
+dim  : 2 #600 #20 #100 #600 #200 #200 #20 #600 #200 # 600
+bistable_axis : 0 #15 #123
+equation_latex  : x-x^3
+analytical_eigenfunction:
+  _target_: dynamical_functions.bistable_ND_koopman_eigenfunction
+  _partial_ : true
+  dim       : ${..dim}
+  pos       : ${..bistable_axis}

@@ -1,0 +1,23 @@
+defaults:
+  - main
+  - _self_
+  # - hydra: multirun_sweepeigenvalue
+
+dynamics_choice : 2bitflipflop_2D_separatrix
+
+model:
+  hidden_size : 400
+  num_layers  : 20
+
+device  : cuda:2
+
+separatrix_locator :
+  num_models  : 1
+
+separatrix_locator_fit_kwargs:
+#  num_epochs: 1000
+  num_epochs: 1000      # switch to this later
+  batch_size: 1000      # use this for now
+#  batch_size: 5000     # better alternative?
+  balance_loss_lambda : 1e-2 #5e-2
+  RHS_function: 'lambda psi: psi-psi**3'

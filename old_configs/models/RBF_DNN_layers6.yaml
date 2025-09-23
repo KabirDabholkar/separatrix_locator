@@ -1,0 +1,73 @@
+_target_  : utils.setattrs_kwargs
+target  :
+  _target_  : torch.nn.Sequential
+  _args_  :
+    - _target_    : torch.nn.Linear
+      in_features : ${....input_size}
+      out_features: ${....hidden_size}
+    - _target_    : torch.nn.Tanh
+    - _target_    : torch.nn.Linear
+      in_features : ${....hidden_size}
+      out_features: ${....hidden_size}
+    - _target_    : torch.nn.Tanh
+    - _target_    : torch.nn.Linear
+      in_features : ${....hidden_size}
+      out_features: ${....hidden_size}
+    - _target_    : torch.nn.Tanh
+    - _target_    : torch.nn.Linear
+      in_features : ${....hidden_size}
+      out_features: ${....hidden_size}
+    - _target_    : torch.nn.Tanh
+    - _target_    : torch.nn.Linear
+      in_features : ${....hidden_size}
+      out_features: ${....hidden_size}
+    - _target_    : torch.nn.Tanh
+    - _target_    : torch.nn.Linear
+      in_features : ${....hidden_size}
+      out_features: ${....rbf_dim}
+    - _target_  : learn_koopman_eig.partialised_RBF_maker
+      in_features_dim : ${....rbf_dim}
+      num_kernels :  100 #00
+      out_features_dim : 1
+      normalization : false
+      reset_params  :
+        upper_bound_kernels: 2
+        std_shapes: 3
+
+rbf_dim : 2
+input_size : ${dynamics.dim}
+hidden_size: 1000 #40
+output_size: 7 #10
+num_layers : 6
+name  : RBF_DNN_layers${.num_layers}_Tanh_hidden${.hidden_size}_output${.output_size}
+
+#param_specific_hyperparams:
+#  - params:
+#      - 0.weight
+#      - 0.bias
+#      - 2.weight
+#      - 2.bias
+#      - 4.weight
+#      - 4.bias
+#      - 6.weight
+#      - 6.bias
+#      - 8.weight
+#      - 8.bias
+#    weight_decay: 0
+#  - params:
+#      - 10.weight
+#      - 10.bias
+#    weight_decay: 0 #5e-4
+#_target_  : torch.nn.Sequential
+#_args_  :
+#- _target_    : torch.nn.Linear
+#  in_features : 2
+#  out_features: 10
+#- _target_    : torch.nn.Tanh
+#- _target_    : torch.nn.Linear
+#  in_features : 10
+#  out_features: 10
+#- _target_    : torch.nn.Tanh
+#- _target_    : torch.nn.Linear
+#  in_features : 10
+#  out_features: 10
