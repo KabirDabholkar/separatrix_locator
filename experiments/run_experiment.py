@@ -19,6 +19,11 @@ import torch.nn as nn
 # Import from the separatrix_locator package
 from separatrix_locator.core.separatrix_locator import SeparatrixLocator
 from separatrix_locator.plotting.plots import plot_dynamics_2D, plot_model_output_histograms
+from separatrix_locator.plotting import plot_hermite_curves_with_separatrix
+from separatrix_locator.plotting.ode_plots import plot_ode_line_trajectories
+
+
+DEFAULT_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def load_config(config_path: str):
@@ -66,6 +71,7 @@ def load_config(config_path: str):
         'balance_loss_lambda': getattr(config_module, 'balance_loss_lambda', None),
         'x_limits': getattr(config_module, 'x_limits', None),
         'y_limits': getattr(config_module, 'y_limits', None),
+        'hermite_scale': getattr(config_module, 'hermite_scale', None),
     }
     
     return config_module.dynamics, model_or_models, config_module.dists, save_dir, defaults
@@ -82,7 +88,7 @@ def run_simple_experiment(
     optimizer: Optional[Callable] = None,
     rhs_function: str = "lambda phi: phi-phi**3",
     balance_loss_lambda: float = 0.0,
-    device: str = "cpu",
+    device: str = DEFAULT_DEVICE,
     verbose: bool = True,
     train_models: bool = False,
     show_plots: bool = True,
@@ -90,7 +96,13 @@ def run_simple_experiment(
     y_limits: tuple = (-2, 2),
     plot_histograms_before_training: bool = False,
     plot_histograms_after_training: bool = True,
-    strict_no_fit: bool = False
+    strict_no_fit: bool = False,
+    show_dynamics_2d: bool = False,
+    hermite_rand_scale: Optional[float] = None,
+    plot_ode_trajectories: bool = False,
+    ode_num_points: int = 100,
+    ode_integration_time: float = 25.0,
+    ode_integration_steps: int = 100
 ) -> tuple:
     """
     Run a complete separatrix locator experiment.
@@ -112,7 +124,7 @@ def run_simple_experiment(
     batch_size : int
         Batch size for training
     device : str
-        Device to use ("cpu" or "cuda")
+        Device to use (default: "cuda" if available else "cpu")
     verbose : bool
         Whether to print progress
     train_models : bool
@@ -127,6 +139,14 @@ def run_simple_experiment(
         Whether to plot model output histograms before training
     plot_histograms_after_training : bool
         Whether to plot model output histograms after training
+    plot_ode_trajectories : bool
+        Whether to plot ODE trajectories along line joining attractors
+    ode_num_points : int
+        Number of points along the line for ODE trajectory analysis
+    ode_integration_time : float
+        Integration time for ODE trajectories
+    ode_integration_steps : int
+        Number of integration steps for ODE trajectories
         
     Returns:
     --------
@@ -261,14 +281,89 @@ def run_simple_experiment(
                 predictions.append(pred.cpu())
             return torch.stack(predictions, dim=-1).mean(dim=-1)
     
-    plot_dynamics_2D(
-        dynamics.function, 
-        predict_function, 
-        x_limits=x_limits, 
-        y_limits=y_limits, 
-        show=show_plots, 
-        save_dir=save_dir
-    )
+    
+    if show_dynamics_2d and getattr(dynamics, 'dim', 2) == 2:
+        plot_dynamics_2D(
+            dynamics.function,
+            predict_function,
+            x_limits=x_limits,
+            y_limits=y_limits,
+            show=show_plots,
+            save_dir=save_dir
+        )
+    elif verbose:
+        print("Skipping 2D dynamics plot (either not requested or dynamics is not 2D)")
+
+    # Optionally generate Hermite curve plots comparing KEF zeros to true separatrix (any dimension)
+    if getattr(dynamics, 'plot_hermite_after_training', False):
+        attractors = dynamics.get_attractors()
+        attractors = torch.stack(attractors)
+        input_concat = getattr(dynamics, 'hermite_input_concatenator', None)
+        plot_hermite_curves_with_separatrix(
+            dynamics_function=dynamics.function,
+            attractors=attractors,
+            kef_predictor=predict_function,
+            input_concatenator=input_concat,
+            x_limits=x_limits,
+            y_limits=y_limits,
+            save_dir=save_dir,
+            show=show_plots,
+            **({ 'rand_scale': hermite_rand_scale } if hermite_rand_scale is not None else {})
+        )
+
+    # Optionally generate ODE trajectory plots
+    if plot_ode_trajectories:
+        if verbose:
+            print("Generating ODE trajectory plots...")
+        
+        # Get attractors from dynamics
+        if hasattr(dynamics, 'get_attractors'):
+            attractors = dynamics.get_attractors()
+        elif hasattr(dynamics, 'attractors'):
+            attractors = dynamics.attractors
+        else:
+            if verbose:
+                print("Warning: No attractors found in dynamics. Skipping ODE trajectory plots.")
+            attractors = None
+        
+        if attractors is not None:
+            # Convert to tensor if needed
+            
+            attractors_tensor = []
+            for attractor in attractors:
+                if not isinstance(attractor, torch.Tensor):
+                    attractor = torch.tensor(attractor, device=device)
+                attractors_tensor.append(attractor)
+            
+            # Get static external input if available
+            static_external_input = getattr(dynamics, 'static_external_input', None)
+            if static_external_input is not None and not isinstance(static_external_input, torch.Tensor):
+                static_external_input = torch.tensor(static_external_input, device=device)
+            
+            try:
+                ode_results = plot_ode_line_trajectories(
+                    dynamics_function=dynamics.function,
+                    attractors=attractors_tensor,
+                    save_dir=save_dir,
+                    num_points=ode_num_points,
+                    T=ode_integration_time,
+                    steps=ode_integration_steps,
+                    static_external_input=static_external_input,
+                    show=show_plots,
+                    device=device
+                )
+                
+                if verbose:
+                    print("ODE trajectory plots generated")
+                    print(f"Convergence rate: {ode_results['convergence_analysis']['convergence_rate']:.2%}")
+                    print(f"Mean trajectory length: {ode_results['trajectory_statistics']['mean_trajectory_length']:.2f}")
+                    
+            except Exception as e:
+                if verbose:
+                    print(f"Warning: Failed to generate ODE trajectory plots: {e}")
+        else:
+            if verbose:
+                print("No attractors available for ODE trajectory analysis")
     
     if verbose:
         print("Plots generated")
@@ -348,8 +443,8 @@ def main():
         "--device", 
         type=str, 
         choices=["cpu", "cuda"], 
-        default="cpu",
-        help="Device to use (default: cpu)"
+        default=DEFAULT_DEVICE,
+        help="Device to use (default: cuda if available else cpu)"
     )
     parser.add_argument(
         "--train", 
@@ -360,6 +455,11 @@ def main():
         "--no-plots", 
         action="store_true", 
         help="Don't show plots"
+    )
+    parser.add_argument(
+        "--plot-dynamics-2d",
+        action="store_true",
+        help="Plot 2D vector field and KEF only when dynamics is 2D"
     )
     parser.add_argument(
         "--verbose", 
@@ -375,6 +475,17 @@ def main():
         "--no-histograms-after", 
         action="store_true", 
         help="Don't plot model output histograms after training (default: plot after training)"
+    )
+    parser.add_argument(
+        "--plot-hermite", 
+        action="store_true", 
+        help="Plot Hermite curves comparing KEF zeros vs true separatrix after training"
+    )
+    parser.add_argument(
+        "--hermite-scale",
+        type=float,
+        default=None,
+        help="Random tangent perturbation scale for Hermite curves (rand_scale)"
     )
     parser.add_argument(
         "--no-fit",
@@ -394,6 +505,29 @@ def main():
         type=float, 
         default=None,
         help="Y-axis limits for plotting (default: from config or (-2, 2))"
+    )
+    parser.add_argument(
+        "--plot-ode-trajectories",
+        action="store_true",
+        help="Plot ODE trajectories along line joining attractors"
+    )
+    parser.add_argument(
+        "--ode-num-points",
+        type=int,
+        default=100,
+        help="Number of points along the line for ODE trajectory analysis (default: 100)"
+    )
+    parser.add_argument(
+        "--ode-integration-time",
+        type=float,
+        default=25.0,
+        help="Integration time for ODE trajectories (default: 25.0)"
+    )
+    parser.add_argument(
+        "--ode-integration-steps",
+        type=int,
+        default=100,
+        help="Number of integration steps for ODE trajectories (default: 100)"
     )
     
     args = parser.parse_args()
@@ -431,6 +565,13 @@ def main():
         optimizer = defaults.get('optimizer')
 
 
+    # Surface the hermite plotting preference via dynamics attribute for now
+    if args.plot_hermite:
+        setattr(dynamics, 'plot_hermite_after_training', True)
+
+    # Resolve Hermite scale precedence: CLI > config default > plotting default
+    resolved_hermite_scale = args.hermite_scale if hasattr(args, 'hermite_scale') and args.hermite_scale is not None else defaults.get('hermite_scale')
+
     locator, results = run_simple_experiment(
         dynamics=dynamics,
         model_or_models=model_or_models,
@@ -450,7 +591,13 @@ def main():
         y_limits=resolved_y_limits,
         plot_histograms_before_training=args.plot_histograms_before,
         plot_histograms_after_training=not args.no_histograms_after,
-        strict_no_fit=args.no_fit
+        strict_no_fit=args.no_fit,
+        show_dynamics_2d=args.plot_dynamics_2d,
+        hermite_rand_scale=resolved_hermite_scale,
+        plot_ode_trajectories=args.plot_ode_trajectories,
+        ode_num_points=args.ode_num_points,
+        ode_integration_time=args.ode_integration_time,
+        ode_integration_steps=args.ode_integration_steps
     )
     
     print(f"\nExperiment completed successfully!")

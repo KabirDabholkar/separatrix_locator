@@ -302,7 +302,6 @@ def runGD(
 
     trajectories_initial = []
     trajectories_external = []
-    below_threshold_mask = torch.zeros(batch_size, dtype=torch.bool)
     below_threshold_points = []
     below_threshold_indices = []
 
@@ -322,6 +321,8 @@ def runGD(
     initial_conditions = initial_conditions.to(target_device)
     if external_inputs is not None:
         external_inputs = external_inputs.to(target_device)
+
+    below_threshold_mask = torch.zeros(batch_size, dtype=torch.bool, device=target_device)
 
     for step in range(num_steps):
         optimizer.zero_grad()

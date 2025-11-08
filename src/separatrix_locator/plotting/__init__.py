@@ -12,6 +12,9 @@ from .plots import (
     dynamics_to_kinetic_energy,
     remove_frame,
 )
+from .hermite import (
+    plot_hermite_curves_with_separatrix,
+)
 
 __all__ = [
     'plot_dynamics_1D',
@@ -20,6 +23,7 @@ __all__ = [
     'plot_flow_streamlines',
     'dynamics_to_kinetic_energy',
     'remove_frame',
+    'plot_hermite_curves_with_separatrix',
 ]
 
 

@@ -3,8 +3,11 @@ from separatrix_locator.distributions import MultivariateGaussian, multiscaler
 from separatrix_locator.dynamics import FlipFlop1Bit2D
 from separatrix_locator.dynamics.rnn import GRU_RNN, get_autonomous_dynamics_from_model, discrete_to_continuous, set_model_with_checkpoint
 from pathlib import Path
-from configs.base import *
+from base import *
 import torch
+from preprocess_1bitflipflop64D import estimate_attractors
+from separatrix_locator.dynamics.base import DynamicalSystem
+
 
 dim = 2
 
@@ -13,6 +16,8 @@ epochs = 300
 batch_size = 1000
 balance_loss_lambda = 1e-2
 RHS_function = "lambda psi: psi-psi**3"
+
+hermite_scale = 2.0
 
 # RNN parameters from old YAML config
 # GRU_RNN with ob_size=1, act_size=1, num_h=2 (dim=2, k_bit=1)
@@ -64,7 +69,7 @@ def dynamics_function(x):
     return continuous_dynamics(x) * rnn_params['speed_factor']
 
 # Create a dynamics object that wraps the RNN-based dynamics
-class RNNFlipFlopDynamics:
+class RNNFlipFlopDynamics(DynamicalSystem):
     def __init__(self, func, name="RNNFlipFlop1Bit2D"):
         self.func = func
         self.name = name
@@ -73,12 +78,13 @@ class RNNFlipFlopDynamics:
     def function(self, x):
         return self.func(x)
 
+
 dynamics = RNNFlipFlopDynamics(dynamics_function)
 
 model = ResNet(
     input_dim=dim,
     hidden_size=400,  # from old config
-    num_layers=20,    # from old config
+    num_layers=10,    # from old config
     output_dim=1,
     input_scale_factor=1.0,
     input_center=None,
@@ -95,7 +101,5 @@ dist = MultivariateGaussian(
 dists = multiscaler(dist, [0.01, 0.1, 0.5, 1.0, 2.0, 4.0])
 
 # Plotting limits from old config
-
-
 
 save_dir = Path("results") / f"{dynamics.name}_{dists.name}" / f"{model.name}"

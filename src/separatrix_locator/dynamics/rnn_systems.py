@@ -67,13 +67,13 @@ class RNNDecisionMaking(DynamicalSystem):
         
         return dx_dt
     
-    def get_attractors(self) -> torch.Tensor:
+    def get_attractors(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """Get approximate attractor locations (these would need to be computed numerically)"""
         # For RNNs, attractors are typically computed numerically
         # Here we return approximate locations based on the network structure
         attractor1 = torch.ones(self.hidden_size) * 0.5
         attractor2 = torch.ones(self.hidden_size) * -0.5
-        return torch.stack([attractor1, attractor2])
+        return (attractor1, attractor2)
     
     def get_separatrix(self) -> torch.Tensor:
         """Get the separatrix (typically near the origin for RNNs)"""

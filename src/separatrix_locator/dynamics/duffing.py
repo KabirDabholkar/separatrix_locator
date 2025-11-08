@@ -50,15 +50,13 @@ class DuffingOscillator(DynamicalSystem):
     
     def get_attractors(self) -> torch.Tensor:
         """Get the stable fixed points at (±1, 0)"""
-        return torch.tensor([[1.0, 0.0], [-1.0, 0.0]], dtype=torch.float32)
+        return (torch.tensor([1.0, 0.0], dtype=torch.float32),
+                torch.tensor([-1.0, 0.0], dtype=torch.float32))
     
     def get_separatrix(self) -> torch.Tensor:
         """Get the unstable fixed point (separatrix) at (0, 0)"""
         return torch.tensor([[0.0, 0.0]], dtype=torch.float32)
     
-    def get_phase_portrait_limits(self) -> Tuple[Tuple[float, float], Tuple[float, float]]:
-        """Get recommended limits for plotting the phase portrait."""
-        return ((-3.0, 3.0), (-3.0, 3.0))
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ from .helpers import (
     train_model_on_trajectories_sgd, BistableKEF, compute_loss
 )
 from .odeint_utils import add_t_arg_to_dynamical_function, run_odeint_to_final
+from .attractors import get_estimate_attractor_func
 from separatrix_locator.core.separatrix_point import find_separatrix_point_along_line, find_saddle_point
 
 __all__ = [
@@ -39,6 +40,7 @@ __all__ = [
     "compute_loss",
     "add_t_arg_to_dynamical_function",
     "run_odeint_to_final",
+    "get_estimate_attractor_func",
     "find_separatrix_point_along_line",
     "find_saddle_point",
 ]

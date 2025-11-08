@@ -35,10 +35,12 @@ class FlipFlop1Bit2D(DynamicalSystem):
         
         return torch.cat([dx_dt, dy_dt], dim=-1)
     
-    def get_attractors(self) -> torch.Tensor:
+    def get_attractors(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """Get the stable fixed points (approximate locations)"""
         # These are approximate - the exact locations depend on the tanh nonlinearity
-        return torch.tensor([[1.0, -1.0], [-1.0, 1.0]], dtype=torch.float32)
+        attractor1 = torch.tensor([1.0, -1.0], dtype=torch.float32)
+        attractor2 = torch.tensor([-1.0, 1.0], dtype=torch.float32)
+        return (attractor1, attractor2)
     
     def get_separatrix(self) -> torch.Tensor:
         """Get the unstable fixed point (separatrix) at (0, 0)"""
@@ -68,10 +70,12 @@ class FlipFlop2Bit2D(DynamicalSystem):
         
         return torch.cat([dx_dt, dy_dt], dim=-1)
     
-    def get_attractors(self) -> torch.Tensor:
+    def get_attractors(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """Get the stable fixed points (approximate locations)"""
         # These are approximate - the exact locations depend on the tanh nonlinearity
-        return torch.tensor([[1.0, 1.0], [-1.0, -1.0]], dtype=torch.float32)
+        attractor1 = torch.tensor([1.0, 1.0], dtype=torch.float32)
+        attractor2 = torch.tensor([-1.0, -1.0], dtype=torch.float32)
+        return (attractor1, attractor2)
     
     def get_separatrix(self) -> torch.Tensor:
         """Get the unstable fixed point (separatrix) at (0, 0)"""

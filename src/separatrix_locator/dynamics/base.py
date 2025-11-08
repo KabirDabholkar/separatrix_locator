@@ -5,6 +5,7 @@ Base class for dynamical systems.
 import torch
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
+from separatrix_locator.utils import get_estimate_attractor_func
 
 
 class DynamicalSystem(ABC):
@@ -45,14 +46,21 @@ class DynamicalSystem(ABC):
     
     def get_attractors(self) -> Optional[torch.Tensor]:
         """
-        Get the fixed points/attractors of the system, if available.
-        
-        Returns:
-        --------
+        Default implementation: estimate attractors by clustering final states of
+        trajectories integrated from random initial conditions. Subclasses with
+        analytical attractors should override this method.
+
+        Returns
+        -------
         Optional[torch.Tensor]
             Attractor points of shape (num_attractors, dim) if defined, else None
         """
-        raise NotImplementedError("This system does not define attractors")
+        try:
+            estimate_attractors = get_estimate_attractor_func(self.function)
+            a1, a2 = estimate_attractors(self.dim)
+            return (a1, a2)
+        except Exception as exc:
+            raise NotImplementedError("This system does not define attractors") from exc
     
     def sample_initial_conditions(self, distribution: torch.distributions.Distribution, batch_size: int) -> torch.Tensor:
         """

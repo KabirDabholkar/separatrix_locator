@@ -2,6 +2,11 @@
 
 A Python package for locating separatrices in black-box dynamical systems using Koopman eigenfunctions from the paper: [*Finding separatrices of dynamical flows with Deep Koopman Eigenfunctions*](https://arxiv.org/abs/2505.15231).
 
+---
+This is a cleaner (but as of now, less complete) refactor of: https://github.com/KabirDabholkar/separatrixLocator.git
+
+---
+
 ## Installation
 
 ```bash
@@ -32,7 +37,7 @@ Tip: you can set `PIP_INDEX_URL` to the PyTorch CUDA index in your environment o
 To run the experiments, run the following:
 
 ```bash
-python experiments/simple_experiment.py configs/[config_name].py
+python experiments/run_experiment.py configs/[config_name].py
 ```
 
 - **``configs/bistable2d.py``**: Simple 2D bistable system.
@@ -64,7 +69,7 @@ from separatrix_locator.core.models import ResNet
 
 ## Quick start:
 
-Example: Learning a the Koopman eigenfuncion for a 1D system with $\dot x = \sin(x)$, implemented by inheriting from `separatix_locator/dynamics/base.py`'s `DynamicalSystem`:
+Example: Learning a the Koopman eigenfuncion for a 1D system with $\dot x = \sin(x)$:
 
 ```python
 import torch
@@ -119,3 +124,7 @@ locator.fit(
 )
 ```
 If not provided, the default is the squashed variant.
+
+---
+### Improvements
+Now computing the inner product $\nabla \psi(x)\cdot f(x)$ using `torch.autograd.functional.jvp` instead of `torch.autograd.grad` which makes the forward pass significantly faster. Thanks to [Guillaume Hennequin](https://github.com/ghennequin) for pointing this out.

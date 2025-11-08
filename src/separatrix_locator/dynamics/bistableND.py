@@ -6,7 +6,7 @@ axes are linearly stable with dynamics -x.
 """
 
 import torch
-from typing import Optional
+from typing import Optional, Tuple
 
 from .base import DynamicalSystem
 
@@ -69,17 +69,17 @@ class BistableND(DynamicalSystem):
         fx[..., self.bistable_axis:self.bistable_axis + 1] = xa - xa ** 3
         return fx
 
-    def get_attractors(self) -> torch.Tensor:
+    def get_attractors(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """Return the two stable fixed points.
 
         (+1 at bistable axis, 0 elsewhere) and (-1 at bistable axis, 0 elsewhere)
-        Shape: (2, dim)
+        Returns a tuple of two tensors, each of shape (dim,)
         """
         plus = torch.zeros(self.dim, dtype=torch.float32)
         minus = torch.zeros(self.dim, dtype=torch.float32)
         plus[self.bistable_axis] = 1.0
         minus[self.bistable_axis] = -1.0
-        return torch.stack([plus, minus], dim=0)
+        return (plus, minus)
 
 
 

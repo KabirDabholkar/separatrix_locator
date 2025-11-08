@@ -8,6 +8,7 @@ from dynamical systems data.
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.autograd.functional import jvp
 from functools import partial
 from typing import Optional, List, Callable, Dict, Any
 import numpy as np
@@ -96,6 +97,47 @@ def distance_weighted_normaliser(x, y, positions, axis=0, return_terms=False, di
     if return_terms:
         return ratio, numerator_sum, denominator_sum
     return ratio
+
+
+def compute_phi_and_dot_prod(model, x_batch, input_to_model, F_x, use_jvp=False, external_inputs=None):
+    """
+    Compute phi(x) and the directional derivative phi'(x)F(x).
+
+    Args:
+        model: The Koopman eigenfunction model.
+        x_batch: Tensor of input states requiring gradients.
+        input_to_model: Input tensor fed directly into the model (may include external inputs).
+        F_x: Vector field evaluated at x_batch.
+        use_jvp: Whether to use Jacobian-vector products (True) or explicit gradients (False).
+        external_inputs: Optional tensor of external inputs concatenated with x_batch.
+
+    Returns:
+        Tuple[phi_x, dot_prod] where dot_prod aligns with phi'(x)F(x).
+    """
+    if use_jvp:
+        def model_fn(x):
+            if external_inputs is None:
+                return model(x)
+            return model(torch.cat((x, external_inputs), dim=-1))
+
+        phi_x, directional_derivative = jvp(
+            model_fn,
+            (x_batch,),
+            (F_x,),
+            create_graph=True,
+            strict=True,
+        )
+        dot_prod = directional_derivative
+    else:
+        phi_x = model(input_to_model)
+        phi_x_prime = torch.autograd.grad(
+            outputs=phi_x,
+            inputs=x_batch,
+            grad_outputs=torch.ones_like(phi_x),
+            create_graph=True,
+        )[0]
+        dot_prod = (phi_x_prime * F_x).sum(axis=-1, keepdim=True)
+    return phi_x, dot_prod
 
 
 def eval_loss(
@@ -198,11 +240,12 @@ def eval_loss(
 
 
 def train_with_logger(
-        model, F, dists, external_input_dist=None, dist_requires_dim=True, num_epochs=1000,
+        model, F, dists, external_input_dist=None, dist_requires_dim=False, num_epochs=1000,
         batch_size=512,
         dynamics_dim=1, decay_module=None, logger=None, lr_scheduler=None,
         eigenvalue=1.0, print_every_num_epochs=10, device='cpu', param_specific_hyperparams=[],
         normaliser=partial(shuffle_normaliser, axis=None, return_terms=True),
+        # normaliser=partial(variance_normaliser, axis=None, return_terms=True),
         verbose=False,
         restrict_to_distribution_lambda=0,
         ext_inp_batch_size=None,
@@ -215,6 +258,7 @@ def train_with_logger(
         dist_weights=None,
         balance_loss_lambda=0.01,
         RHS_function='lambda psi: psi-psi**3',
+        use_jvp=True,
 ):
     if len(param_specific_hyperparams) == 0:
         param_specific_hyperparams = model.parameters()
@@ -254,6 +298,7 @@ def train_with_logger(
 
             x_batch.requires_grad_(True)
             input_to_model = x_batch
+            external_inputs = None
 
             if external_input_dist_single is not None:
                 if fixed_external_inputs is not None:
@@ -270,18 +315,17 @@ def train_with_logger(
 
                 input_to_model = torch.cat((input_to_model, external_inputs), dim=-1)
 
-            phi_x = model(input_to_model)
-            phi_x_prime = torch.autograd.grad(
-                outputs=phi_x,
-                inputs=x_batch,
-                grad_outputs=torch.ones_like(phi_x),
-                create_graph=True,
-            )[0]
-
             F_inputs = [x_batch] + ([] if external_input_dist_single is None else [external_inputs])
             F_x = F(*F_inputs)
 
-            dot_prod = (phi_x_prime * F_x).sum(axis=-1, keepdim=True)
+            phi_x, dot_prod = compute_phi_and_dot_prod(
+                model=model,
+                x_batch=x_batch,
+                input_to_model=input_to_model,
+                F_x=F_x,
+                use_jvp=use_jvp,
+                external_inputs=external_inputs,
+            )
             # main_loss = torch.mean((dot_prod/eigenvalue - phi_x) ** 2)
             main_loss = torch.mean((dot_prod/eigenvalue - eval(RHS_function)(phi_x)) ** 2)
 
@@ -378,3 +422,4 @@ def _evaluate_param_specific_hyperparams(model, param_specific_hyperparams):
         new_param_list['params'] = [params[p] for p in param_list['params']]
         param_specific_hyperparams_complete.append(new_param_list)
     return param_specific_hyperparams_complete
+    

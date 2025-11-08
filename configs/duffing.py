@@ -2,7 +2,7 @@ from separatrix_locator.core.models import ResNet
 from separatrix_locator.distributions import MultivariateGaussian, multiscaler
 from separatrix_locator.dynamics import DuffingOscillator
 from pathlib import Path
-from configs.base import *
+from base import *
 
 dim = 2
 epochs = 1000
