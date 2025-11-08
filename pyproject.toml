@@ -41,8 +41,8 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 separatrix_locator = [
-  "examples/*.ipynb",
-  "examples/*.py",
+  "notebook_tutorials/*.ipynb",
+  "notebook_tutorials/*.py",
 ]
 
 [tool.setuptools.packages.find]

@@ -31,7 +31,13 @@ pip install --index-url https://download.pytorch.org/whl/cu118 torch==2.4.*
 pip install -e .
 ```
 
-Tip: you can set `PIP_INDEX_URL` to the PyTorch CUDA index in your environment or `pip.conf` to make CUDA selection persistent.
+## Notebook tutorials
+
+Interactive tutorials demonstrating core workflows live in `notebook_tutorials/`:
+
+- `notebook_tutorials/01_bistable_1d.ipynb`: Learn Koopman eigenfunctions for a 1D bistable system.
+- `notebook_tutorials/02_duffing_oscillator.ipynb`: Explore the classic Duffing oscillator dynamics.
+- `notebook_tutorials/03_rnn_flipflop_2d.ipynb`: Analyze a trained RNN flip-flop with bistable behavior.
 
 ## Baselines experiments included in the repo
 To run the experiments, run the following:
