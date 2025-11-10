@@ -23,6 +23,22 @@ from separatrix_locator.plotting import plot_hermite_curves_with_separatrix
 from separatrix_locator.plotting.ode_plots import plot_ode_line_trajectories
 
 
+def default_rhs_function(psi: torch.Tensor) -> torch.Tensor:
+    return psi - psi ** 3
+
+
+def parse_rhs_function(rhs_spec: Optional[str]) -> Optional[Callable[[torch.Tensor], torch.Tensor]]:
+    if rhs_spec is None:
+        return None
+    rhs_spec = rhs_spec.strip()
+    try:
+        return eval(rhs_spec, {"torch": torch})
+    except SyntaxError:
+        namespace = {}
+        exec(f"def _rhs(psi):\n    return {rhs_spec}", {"torch": torch}, namespace)
+        return namespace["_rhs"]
+
+
 DEFAULT_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -86,7 +102,7 @@ def run_simple_experiment(
     learning_rate: float = 1e-3,
     batch_size: int = 1000,
     optimizer: Optional[Callable] = None,
-    rhs_function: str = "lambda phi: phi-phi**3",
+    rhs_function: Callable[[torch.Tensor], torch.Tensor] = default_rhs_function,
     balance_loss_lambda: float = 0.0,
     device: str = DEFAULT_DEVICE,
     verbose: bool = True,
@@ -139,6 +155,8 @@ def run_simple_experiment(
         Whether to plot model output histograms before training
     plot_histograms_after_training : bool
         Whether to plot model output histograms after training
+    rhs_function : callable
+        Right-hand side function ψ ↦ g(ψ) used in the loss
     plot_ode_trajectories : bool
         Whether to plot ODE trajectories along line joining attractors
     ode_num_points : int
@@ -431,7 +449,7 @@ def main():
         "--rhs-function",
         type=str,
         default=None,
-        help="Right-hand side function of phi as a Python lambda string (default from config)"
+        help="Right-hand side function g(psi) for the loss. Provide either a Python lambda (e.g. \"lambda psi: psi\") or an expression in psi (e.g. \"psi - psi**3\")."
     )
     parser.add_argument(
         "--balance-loss-lambda",
@@ -546,7 +564,9 @@ def main():
     resolved_epochs = args.epochs if args.epochs is not None else (defaults.get('epochs') if defaults.get('epochs') is not None else 1000)
     resolved_batch_size = args.batch_size if args.batch_size is not None else (defaults.get('batch_size') if defaults.get('batch_size') is not None else 128)
     resolved_lr = args.learning_rate if args.learning_rate is not None else (defaults.get('learning_rate') if defaults.get('learning_rate') is not None else 1e-3)
-    resolved_rhs = args.rhs_function if args.rhs_function is not None else (defaults.get('RHS_function') if defaults.get('RHS_function') is not None else "lambda phi: phi-phi**3")
+    resolved_rhs = defaults.get('RHS_function') if defaults.get('RHS_function') is not None else default_rhs_function
+    if args.rhs_function is not None:
+        resolved_rhs = parse_rhs_function(args.rhs_function)
     resolved_balance_lambda = args.balance_loss_lambda if args.balance_loss_lambda is not None else (defaults.get('balance_loss_lambda') if defaults.get('balance_loss_lambda') is not None else 0.0)
     # Resolve plot limits: CLI > config defaults > built-in defaults
     resolved_x_limits = tuple(args.x_limits) if args.x_limits is not None else (defaults.get('x_limits') if defaults.get('x_limits') is not None else (-2, 2))

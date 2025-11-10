@@ -15,7 +15,7 @@ dim = 2
 epochs = 300
 batch_size = 1000
 balance_loss_lambda = 1e-2
-RHS_function = "lambda psi: psi-psi**3"
+RHS_function = default_rhs_function
 
 hermite_scale = 2.0
 

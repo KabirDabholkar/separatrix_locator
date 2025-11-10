@@ -158,7 +158,7 @@ batch_size = 3000
 balance_loss_lambda = 5e-2
 learning_rate = 1e-4
 optimizer = partial(torch.optim.AdamW, lr=learning_rate, weight_decay=1e-4)
-RHS_function = "lambda psi: psi-psi**3"
+RHS_function = default_rhs_function
 
 
 # -----------------------------

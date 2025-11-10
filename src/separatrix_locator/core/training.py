@@ -257,7 +257,7 @@ def train_with_logger(
         epoch_callbacks=[],
         dist_weights=None,
         balance_loss_lambda=0.01,
-        RHS_function='lambda psi: psi-psi**3',
+        RHS_function=lambda psi: psi - psi ** 3,
         use_jvp=True,
 ):
     if len(param_specific_hyperparams) == 0:
@@ -327,10 +327,11 @@ def train_with_logger(
                 external_inputs=external_inputs,
             )
             # main_loss = torch.mean((dot_prod/eigenvalue - phi_x) ** 2)
-            main_loss = torch.mean((dot_prod/eigenvalue - eval(RHS_function)(phi_x)) ** 2)
+            rhs_phi_x = RHS_function(phi_x)
+            main_loss = torch.mean((dot_prod/eigenvalue - rhs_phi_x) ** 2)
 
             # normalised_loss, _, _ = normaliser(dot_prod/eigenvalue, phi_x, axis=None, return_terms=True)
-            normalised_loss, _, _ = normaliser(dot_prod/eigenvalue, eval(RHS_function)(phi_x), axis=None, return_terms=True)
+            normalised_loss, _, _ = normaliser(dot_prod/eigenvalue, rhs_phi_x, axis=None, return_terms=True)
             normalised_losses.append(normalised_loss.item())
             total_loss += dist_weights[i] * normalised_loss
 

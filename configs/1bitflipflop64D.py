@@ -16,8 +16,13 @@ dim = 64
 epochs = 1000
 batch_size = 1000
 balance_loss_lambda = 1e-2 #5e-3
-# RHS_function = "lambda psi: psi-psi**3"
-RHS_function = "lambda psi: psi"
+
+
+def identity_rhs(psi):
+    return psi
+
+
+RHS_function = identity_rhs
 
 # RNN hyperparameters mirroring the previous setup
 rnn_params = {
