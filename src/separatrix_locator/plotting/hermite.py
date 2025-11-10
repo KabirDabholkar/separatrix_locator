@@ -37,6 +37,143 @@ def _predict_kef(
     return vals
 
 
+def find_separatrix_along_curve_using_ODE(
+    dynamics_function: Callable[[torch.Tensor], torch.Tensor],
+    alphas: np.ndarray | torch.Tensor,
+    curve_points: np.ndarray | torch.Tensor,
+    integration_time: float = 30.0,
+    kmeans_random_state: int = 42,
+    clustering_method: str = "attractor_eps",
+    attractor_epsilon: float = 0.02,
+    attractors: Optional[torch.Tensor] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Integrate curve points through the provided dynamics and infer separatrix locations.
+
+    Parameters
+    ----------
+    dynamics_function : Callable[[torch.Tensor], torch.Tensor]
+        Vector field defining the ODE dynamics.
+    alphas : array-like
+        1-D array of curve parameters corresponding to the second dimension of curve_points.
+    curve_points : array-like
+        Array of shape (num_curves, num_points, dim) containing points along each curve.
+    integration_time : float, optional
+        Time horizon for integrating the dynamics.
+    kmeans_random_state : int, optional
+        Random seed used when clustering with k-means.
+    clustering_method : {"kmeans", "attractor_eps"}, optional
+        Strategy for classifying integrated endpoints into basins.
+    attractor_epsilon : float, optional
+        Distance threshold for the "attractor_eps" method.
+    attractors : torch.Tensor, optional
+        Tensor of shape (2, dim) with attractor locations, required if clustering_method=="attractor_eps".
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        - change_points_alpha: array of length num_curves with estimated separatrix parameter values.
+        - labels_bt: array of shape (num_curves, num_points) with class labels along each curve.
+    """
+    from sklearn.cluster import KMeans
+    from torchdiffeq import odeint
+
+    if isinstance(alphas, torch.Tensor):
+        alpha_range = alphas.detach().cpu().numpy()
+    else:
+        alpha_range = np.asarray(alphas)
+
+    if alpha_range.ndim != 1:
+        raise ValueError("alphas must be a 1-D array of curve parameters")
+
+    if isinstance(curve_points, torch.Tensor):
+        points_bt = curve_points.detach()
+    else:
+        points_bt = torch.tensor(curve_points, dtype=torch.float32)
+
+    if points_bt.ndimension() != 3:
+        raise ValueError("curve_points must have shape (num_curves, num_points, dim)")
+
+    num_curves, num_points, dim = points_bt.shape
+    device = points_bt.device
+
+    flat_points = points_bt.reshape(-1, dim)
+    t = torch.tensor([0.0, integration_time], dtype=points_bt.dtype, device=device)
+
+    with torch.no_grad():
+        trajectories = odeint(lambda tt, xx: dynamics_function(xx), flat_points, t)
+    final_states = trajectories[-1].detach().cpu().numpy()
+
+    if clustering_method == "kmeans":
+        kmeans = KMeans(n_clusters=2, random_state=kmeans_random_state)
+        labels_flat = kmeans.fit_predict(final_states)
+    elif clustering_method == "attractor_eps":
+        if attractors is None:
+            raise ValueError("attractors must be provided when clustering_method='attractor_eps'")
+        attractors_np = attractors.detach().cpu().numpy()
+        dists = np.stack(
+            [
+                np.linalg.norm(final_states - attractors_np[0], axis=1),
+                np.linalg.norm(final_states - attractors_np[1], axis=1),
+            ],
+            axis=1,
+        )
+        nearest = np.argmin(dists, axis=1)
+        min_d = dists[np.arange(dists.shape[0]), nearest]
+        labels_flat = np.where(min_d <= attractor_epsilon, nearest, -1)
+    else:
+        raise ValueError("clustering_method must be 'kmeans' or 'attractor_eps'")
+
+    labels_bt = labels_flat.reshape(num_curves, num_points)
+
+    if clustering_method == "kmeans":
+        changes_bt = np.diff(labels_bt, axis=1) != 0
+        change_points_idx = np.argmax(changes_bt, axis=1)
+        no_changes = ~np.any(changes_bt, axis=1)
+        change_points_idx[no_changes] = num_points // 2
+        change_points_alpha = alpha_range[change_points_idx]
+        return change_points_alpha, labels_bt
+
+    change_points_alpha = np.zeros(num_curves, dtype=float)
+
+    def left_change_index(labels_row: np.ndarray, target_label: int) -> Optional[int]:
+        idxs = np.where(labels_row == target_label)[0]
+        if len(idxs) == 0 or idxs[0] != 0:
+            return None
+        stops = np.where(labels_row != target_label)[0]
+        if len(stops) == 0:
+            return num_points - 1
+        return int(stops[0] - 1)
+
+    def right_change_index(labels_row: np.ndarray, target_label: int) -> Optional[int]:
+        idxs = np.where(labels_row == target_label)[0]
+        if len(idxs) == 0 or idxs[-1] != num_points - 1:
+            return None
+        stops = np.where(labels_row[::-1] != target_label)[0]
+        if len(stops) == 0:
+            return 0
+        return int(num_points - stops[0])
+
+    for i in range(num_curves):
+        row = labels_bt[i]
+        left_idx_opt = left_change_index(row, target_label=0)
+        right_idx_opt = right_change_index(row, target_label=1)
+
+        alpha_left = alpha_range[left_idx_opt] if left_idx_opt is not None else None
+        alpha_right = alpha_range[right_idx_opt] if right_idx_opt is not None else None
+
+        if (alpha_left is not None) and (alpha_right is not None):
+            change_points_alpha[i] = 0.5 * (alpha_left + alpha_right)
+        elif alpha_left is not None:
+            change_points_alpha[i] = alpha_left
+        elif alpha_right is not None:
+            change_points_alpha[i] = alpha_right
+        else:
+            change_points_alpha[i] = 0.5 * (alpha_range[0] + alpha_range[-1])
+
+    return change_points_alpha, labels_bt
+
+
 def plot_hermite_curves_with_separatrix(
     dynamics_function: Callable[[torch.Tensor], torch.Tensor],
     attractors: torch.Tensor,

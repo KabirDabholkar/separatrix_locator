@@ -6,15 +6,21 @@ models and uses them to locate separatrices through gradient descent.
 """
 
 from sklearn.base import BaseEstimator
+from sklearn.metrics import r2_score
+from sklearn.decomposition import PCA
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.multiprocessing as mp
 from functools import partial
 from pathlib import Path
-from typing import Iterable, Optional, Union, Dict, Any, List
+from typing import Iterable, Optional, Union, Dict, Any, List, Sequence, Tuple
 import os
 
 from separatrix_locator.utils.compose import compose
+from separatrix_locator.utils.interpolation import generate_curves_between_points
+from separatrix_locator.plotting.hermite import find_separatrix_along_curve_using_ODE
+import matplotlib.pyplot as plt
 
 
 class SeparatrixLocator(BaseEstimator):
@@ -437,3 +443,182 @@ class SeparatrixLocator(BaseEstimator):
             all_below.append(ret[1])
         
         return all_traj, all_below
+
+    def validate_with_curves(
+        self,
+        dynamics_function,
+        attractors: Union[np.ndarray, torch.Tensor],
+        num_curves: int = 100,
+        num_points: int = 100,
+        rand_scale: float = 3.0,
+        alpha_lims: Tuple[float, float] = (0.0, 1.0),
+        integration_time: float = 500.0,
+        attractor_epsilon: float = 0.02,
+        kmeans_random_state: int = 42,
+        clustering_method: str = "attractor_eps",
+        kef_component: int = 0,
+        plot_pca: bool = False,
+        plot_kef: bool = False,
+        plot_scatter: bool = False,
+    ) -> float:
+        """
+        Validate the separatrix locator by comparing curve-derived separatrix estimates
+        with the zero-crossing of the Koopman eigenfunction predictions.
+
+        Parameters
+        ----------
+        dynamics_function : Callable[[torch.Tensor], torch.Tensor]
+            Vector field used to integrate points along each curve.
+        attractors : array-like or torch.Tensor of shape (2, dim)
+            Endpoints between which curves are generated.
+        num_curves : int, default=100
+            Number of Hermite curves to sample.
+        num_points : int, default=100
+            Number of evaluation points per curve.
+        rand_scale : float, default=3.0
+            Random tangent perturbation scale for curve generation.
+        alpha_lims : tuple(float, float), default=(0.0, 1.0)
+            Inclusive limits for the curve parameter alpha.
+        integration_time : float, default=500.0
+            Time horizon for the ODE integration inside the separatrix finder.
+        attractor_epsilon : float, default=0.02
+            Distance threshold used by the attractor-epsilon clustering method.
+        kmeans_random_state : int, default=42
+            Random state forwarded to k-means when clustering is enabled.
+        clustering_method : str, default="attractor_eps"
+            Basin classification method passed to `find_separatrix_along_curve_using_ODE`.
+        kef_component : int, default=0
+            Index of the KEF component used when searching for zero crossings.
+        plot_pca : bool, default=False
+            If True, render a PCA projection of the curves with basin labels and change points.
+        plot_kef : bool, default=False
+            If True, plot KEF values along each curve.
+        plot_scatter : bool, default=False
+            If True, scatter `change_points_alpha` against `zero_point_alphas`.
+
+        Returns
+        -------
+        float
+            R² score comparing ODE-derived separatrix alphas with KEF zero alphas.
+        """
+        if not self.models:
+            raise ValueError("Models not trained. Call fit() before validation.")
+
+        if isinstance(attractors, torch.Tensor):
+            attractors_np = attractors.detach().cpu().numpy()
+        else:
+            attractors_np = np.asarray(attractors)
+        if attractors_np.shape[0] != 2:
+            raise ValueError("attractors must have shape (2, dim).")
+
+        curves_np, alphas = generate_curves_between_points(
+            attractors_np[0],
+            attractors_np[1],
+            num_curves=num_curves,
+            num_points=num_points,
+            rand_scale=rand_scale,
+            lims=list(alpha_lims),
+            return_alpha=True,
+        )
+
+        change_points_alpha, labels_bt = find_separatrix_along_curve_using_ODE(
+            dynamics_function=dynamics_function,
+            attractors=torch.tensor(attractors_np, dtype=torch.float32),
+            alphas=alphas,
+            curve_points=curves_np,
+            integration_time=integration_time,
+            attractor_epsilon=attractor_epsilon,
+            kmeans_random_state=kmeans_random_state,
+            clustering_method=clustering_method,
+        )
+
+        curves_tensor = torch.tensor(curves_np, dtype=torch.float32, device=self.device)
+        kef_vals = self.predict(curves_tensor, no_grad=True)
+
+        if kef_vals.dim() == 2:
+            kef_component_vals = kef_vals
+        elif kef_vals.dim() == 3:
+            if kef_component >= kef_vals.shape[-1]:
+                raise IndexError(
+                    f"kef_component {kef_component} is out of range for KEF output size {kef_vals.shape[-1]}."
+                )
+            kef_component_vals = kef_vals[..., kef_component]
+        else:
+            raise ValueError(
+                f"Unexpected KEF prediction shape {kef_vals.shape}. Expected rank 2 or 3 tensor."
+            )
+
+        kef_component_vals = kef_component_vals.cpu()
+        abs_kef = torch.abs(kef_component_vals)
+        zero_idx = torch.argmin(abs_kef, dim=1)
+        alphas_tensor = torch.tensor(alphas, dtype=torch.float32)
+        zero_point_alphas = alphas_tensor[zero_idx].detach().cpu().numpy()
+
+        if plot_pca:
+            num_curves, num_points, dim = curves_np.shape
+            flat_points = curves_np.reshape(-1, dim)
+            pca = PCA(n_components=2)
+            curve_points_pca = pca.fit_transform(flat_points)
+            curve_points_pca_bt = curve_points_pca.reshape(num_curves, num_points, 2)
+            labels_bt_np = np.asarray(labels_bt)
+            max_label = np.max(labels_bt_np[labels_bt_np >= 0]) if np.any(labels_bt_np >= 0) else 1.0
+
+            fig, ax = plt.subplots(figsize=(7, 7))
+            for i in range(num_curves):
+                for j in range(num_points - 1):
+                    label_val = labels_bt_np[i, j]
+                    if label_val < 0 or max_label <= 0:
+                        color = "gray"
+                    else:
+                        color = plt.cm.coolwarm(label_val / max_label)
+                    ax.plot(
+                        curve_points_pca_bt[i, j:j + 2, 0],
+                        curve_points_pca_bt[i, j:j + 2, 1],
+                        color=color,
+                        alpha=0.8,
+                        linewidth=1,
+                    )
+                change_alpha = change_points_alpha[i]
+                change_idx = int(np.argmin(np.abs(alphas - change_alpha)))
+                ax.plot(
+                    curve_points_pca_bt[i, change_idx, 0],
+                    curve_points_pca_bt[i, change_idx, 1],
+                    marker="x",
+                    markersize=8,
+                    markeredgewidth=2,
+                    color="black",
+                    linestyle="None",
+                    label="Change point" if i == 0 else None,
+                )
+            ax.set_title("Hermite curves (PCA) with basin labels\nChange points marked with x's")
+            ax.set_xlabel("PC1")
+            ax.set_ylabel("PC2")
+            if labels_bt_np.ndim == 2 and np.any(labels_bt_np >= 0):
+                sm = plt.cm.ScalarMappable(cmap="coolwarm")
+                sm.set_array(np.linspace(0, max_label, num=100))
+                fig.colorbar(sm, ax=ax, label="Basin label")
+            ax.legend(loc="upper right")
+            plt.show()
+
+        if plot_kef:
+            kef_vals_np = kef_component_vals.detach().cpu().numpy()
+            fig, ax = plt.subplots(figsize=(6.5, 4))
+            ax.plot(alphas, kef_vals_np.T)
+            ax.set_xlabel(r"Curve parameter $\alpha$")
+            ax.set_ylabel(r"KEF value")
+            ax.set_title("KEF values along curves")
+            ax.axhline(0.0, color="black", linewidth=1, linestyle="--", alpha=0.4)
+            plt.show()
+
+        if plot_scatter:
+            fig, ax = plt.subplots(figsize=(3.5, 3.5))
+            ax.scatter(change_points_alpha, zero_point_alphas)
+            ax.plot([alphas[0], alphas[-1]], [alphas[0], alphas[-1]], "k--", alpha=0.5)
+            ax.set_xlabel(r"True separatrix $\alpha$")
+            ax.set_ylabel(r"KEF zero $\alpha$")
+            ax.set_title("Separatrix vs KEF zero")
+            ax.set_aspect("equal", adjustable="box")
+            plt.show()
+
+        score = r2_score(change_points_alpha, zero_point_alphas)
+        return float(score)
