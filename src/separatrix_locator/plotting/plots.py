@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import warnings
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
@@ -16,9 +18,11 @@ import matplotlib.pyplot as plt
 #     except Exception:
 #         pass
 
-# Disable LaTeX by default; enable with USE_TEX=1 if needed
-# use_tex = os.environ.get("USE_TEX", "0") == "1"
-use_tex = True
+# Disable LaTeX by default; enable with USE_TEX=1 if available
+use_tex = os.environ.get("USE_TEX", "0") == "1"
+if use_tex and shutil.which("latex") is None:
+    warnings.warn("USE_TEX requested but LaTeX not found; falling back to Matplotlib text rendering.")
+    use_tex = False
 plt.rcParams['text.usetex'] = use_tex
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["mathtext.fontset"] = "dejavuserif"

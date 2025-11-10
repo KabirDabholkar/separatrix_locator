@@ -5,6 +5,10 @@ This module provides functions for visualizing trajectories, separatrices,
 and dynamical system behavior.
 """
 
+import os
+import shutil
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -12,10 +16,15 @@ from typing import Optional, Tuple, List, Union
 import seaborn as sns
 
 # Set up matplotlib for better plots
-plt.rcParams['text.usetex'] = True
+use_tex = os.environ.get("USE_TEX", "0") == "1"
+if use_tex and shutil.which("latex") is None:
+    warnings.warn("USE_TEX requested but LaTeX not found; falling back to Matplotlib text rendering.")
+    use_tex = False
+plt.rcParams['text.usetex'] = use_tex
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["mathtext.fontset"] = "dejavuserif"
-plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+if use_tex:
+    plt.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 
 
 def plot_trajectories(
