@@ -1,6 +1,6 @@
 # Separatrix Locator
 
-A Python package for locating separatrices in black-box dynamical systems using Koopman eigenfunctions from the paper: [*Finding separatrices of dynamical flows with Deep Koopman Eigenfunctions*](https://arxiv.org/abs/2505.15231).
+A Python package for locating separatrices in black-box dynamical systems using Koopman eigenfunctions from the paper: [*Finding separatrices of dynamical flows with Deep Koopman Eigenfunctions*](https://arxiv.org/abs/2505.15231). Includes newer variants called 'squashed' Koopman Eigenfunctions, which are introduced in a blog (coming soon).
 
 ---
 This is a cleaner (but as of now, less complete) refactor of: https://github.com/KabirDabholkar/separatrixLocator.git
@@ -33,12 +33,15 @@ pip install -e .
 
 ## Notebook tutorials
 
-Interactive tutorials demonstrating core workflows live in `notebook_tutorials/`:
+Interactive tutorials demonstrating core workflows (in `notebook_tutorials/`):
 
-- [`notebook_tutorials/01_bistable_1d.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/01_bistable_1d.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/01_bistable_1d.ipynb): Learn Koopman eigenfunctions for a 1D bistable system.
-- [`notebook_tutorials/02_duffing_oscillator.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/02_duffing_oscillator.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/02_duffing_oscillator.ipynb): Explore the classic Duffing oscillator dynamics.
-- [`notebook_tutorials/03_rnn_flipflop_2d.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/03_rnn_flipflop_2d.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/03_rnn_flipflop_2d.ipynb): Analyze a trained RNN trained on 1 bit flip-flop task.
-- [`notebook_tutorials/04_train_flipflop_rnn.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/04_train_flipflop_rnn.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/04_train_flipflop_rnn.ipynb): Analysing high dimensional RNN trained on 1 bit flip-flop task.
+| Notebook | Description |
+|---|---|
+| [`01_bistable_1d.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/01_bistable_1d.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/01_bistable_1d.ipynb) | Learn Koopman eigenfunctions for a 1D bistable system. |
+| [`02_duffing_oscillator.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/02_duffing_oscillator.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/02_duffing_oscillator.ipynb) | Explore the classic Duffing oscillator dynamics. |
+| [`03_rnn_flipflop_2d.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/03_rnn_flipflop_2d.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/03_rnn_flipflop_2d.ipynb) | Trained RNN on 1 bit flip-flop task (2D). |
+| [`04_train_flipflop_rnn.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/04_train_flipflop_rnn.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/04_train_flipflop_rnn.ipynb) | High dimensional RNN trained on 1 bit flip-flop task. |
+| [`05_finkelstein_fontolan_rnn.ipynb`](https://github.com/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/05_finkelstein_fontolan_rnn.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KabirDabholkar/separatrix_locator/blob/main/notebook_tutorials/05_finkelstein_fontolan_rnn.ipynb) | Finkelstein–Fontolan RNN, picking a distribution in high-D to stay in the bistable and forward invariant domain. |
 
 
 ## Baselines experiments included in the repo
