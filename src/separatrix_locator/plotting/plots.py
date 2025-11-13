@@ -54,7 +54,11 @@ def evaluate_on_grid(func: Callable[[torch.Tensor], torch.Tensor],
     X, Y = meshgrid_xy(x, y)
     XY = torch.stack([X.reshape(-1), Y.reshape(-1)], dim=-1)
     with torch.no_grad():
-        Z = func(XY).reshape(resolution, resolution)
+        Z = func(XY)
+        if Z.ndim > 1 and Z.shape[-1] > 1:
+            Z = Z.reshape(resolution, resolution, Z.shape[-1])
+        else:
+            Z = Z.reshape(resolution, resolution)
     return X.numpy(), Y.numpy(), Z.detach().cpu().numpy()
 
 
@@ -204,6 +208,72 @@ def plot_dynamics_2D(dynamics_function: Callable[[torch.Tensor], torch.Tensor],
         Path(save_dir).mkdir(parents=True, exist_ok=True)
         fig.savefig(Path(save_dir) / 'results2D.png', dpi=300)
         fig.savefig(Path(save_dir) / 'results2D.pdf')
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def plot_dynamics_field(
+    dynamics_function: Callable[[torch.Tensor], torch.Tensor],
+    x_limits: Tuple[float, float],
+    y_limits: Tuple[float, float],
+    save_dir: Optional[str] = None,
+    resolution: int = 200,
+    stream_density: float = 0.7,
+    show: bool = True,
+):
+    """
+    Plot only the dynamics for a 2D system.
+
+    Generates a single-axis figure showing the log10 kinetic energy heatmap with
+    streamlines of the vector field overlaid.
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(3.5, 3))
+
+    kinetic_energy_function = dynamics_to_kinetic_energy(dynamics_function)
+    X, Y, KE = evaluate_on_grid(kinetic_energy_function, x_limits, y_limits, resolution)
+    im = ax.contourf(
+        X,
+        Y,
+        np.log10(KE + 1e-12),
+        levels=np.linspace(-4, 2, 14),
+        cmap="Blues_r",
+    )
+    cbar = plt.colorbar(
+        im,
+        ax=ax,
+        shrink=0.8,
+        location="bottom",
+        label=r"$\log_{10}(q(x))$",
+        ticks=np.linspace(-4, 2, 3),
+    )
+    cbar.ax.set_xlabel(cbar.ax.get_xlabel(), size=12)
+    cbar.outline.set_edgecolor("grey")
+
+    plot_flow_streamlines(
+        dynamics_function,
+        ax,
+        x_limits,
+        y_limits,
+        resolution=resolution,
+        density=stream_density,
+        color="red",
+        linewidth=0.5,
+    )
+
+    ax.set_xlim(*x_limits)
+    ax.set_ylim(*y_limits)
+    ax.set_aspect("equal")
+    remove_frame(ax)
+
+    fig.tight_layout()
+
+    if save_dir is not None:
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+        fig.savefig(Path(save_dir) / "results2D_dynamics.png", dpi=300)
+        fig.savefig(Path(save_dir) / "results2D_dynamics.pdf")
+
     if show:
         plt.show()
     else:

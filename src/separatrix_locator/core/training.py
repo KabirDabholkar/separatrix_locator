@@ -340,7 +340,7 @@ def train_with_logger(
                 total_loss += restrict_to_distribution_lambda * reg_loss
 
             if balance_loss_lambda > 0:
-                balance_loss = torch.abs( torch.mean(phi_x) / torch.std(phi_x) )
+                balance_loss = torch.abs( torch.mean(phi_x[..., 1]) / torch.std(phi_x[..., 1]) )
                 balance_losses.append(balance_loss.item())
                 total_loss += balance_loss_lambda * balance_loss
 
