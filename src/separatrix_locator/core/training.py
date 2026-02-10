@@ -259,6 +259,7 @@ def train_with_logger(
         balance_loss_lambda=0.01,
         RHS_function=lambda psi: psi - psi ** 3,
         use_jvp=True,
+        constrain_points_and_values=None,
 ):
     if len(param_specific_hyperparams) == 0:
         param_specific_hyperparams = model.parameters()
@@ -268,6 +269,11 @@ def train_with_logger(
     optimizer = optimizer(param_specific_hyperparams)
     if lr_scheduler is not None:
         lr_scheduler = lr_scheduler(optimizer)
+
+    if constrain_points_and_values is not None:
+        c_points, c_values = constrain_points_and_values
+        c_points = c_points.to(device)
+        c_values = c_values.to(device)
 
     sample_shape = (batch_size, dynamics_dim) if dist_requires_dim else (batch_size,)
 
@@ -359,6 +365,12 @@ def train_with_logger(
                 reg_loss = ext_inp_reg_coeff * reg_term_value
                 total_loss += reg_loss
                 reg_term_values.append(reg_term_value.item())
+                reg_term_values.append(reg_term_value.item())
+
+        if constrain_points_and_values is not None:
+            constrain_loss = torch.mean((model(c_points) - c_values) ** 2)
+            total_loss += constrain_loss
+
         # Log metrics
         metrics = {
             "Loss/Total": total_loss.item(),
@@ -372,6 +384,9 @@ def train_with_logger(
             metrics[f"Loss/RegTermValue_Dist_{i}"] = reg_term_value
             if balance_loss_lambda > 0:
                 metrics[f"Loss/BalanceLoss_Dist_{i}"] = balance_losses[i]
+
+        if constrain_points_and_values is not None:
+            metrics["Loss/ConstrainLoss"] = constrain_loss.item()
 
         # Add metadata to metrics if provided
         if metadata is not None:
@@ -398,6 +413,7 @@ def train_with_logger(
                 f"Epoch {epoch}, Loss: {total_loss.item()}, Normalised losses: {[n_loss for n_loss in normalised_losses]}, "
                 f"Regularisation term values: {[reg_term_value for reg_term_value in reg_term_values]}, "
                 + (f"Balance losses: {balance_losses}, " if balance_loss_lambda > 0 else "") +
+                (f"Constrain loss: {constrain_loss.item()}, " if constrain_points_and_values is not None else "") +
                 f"param norm: {param_norm}, Learning Rate: {optimizer.param_groups[0]['lr']}, "
                 f"len(model.parameters()): {len(list(model.parameters()))}, "
             )
