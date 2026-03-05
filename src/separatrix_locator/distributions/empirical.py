@@ -55,3 +55,44 @@ class EmpiricalDistribution(BaseDistribution):
 
         # Reshape to match requested shape + (dim,)
         return samples.view(*sample_shape, self.dim)
+
+
+class EmpiricalNoisyDistribution(EmpiricalDistribution):
+    """
+    Empirical distribution that samples with replacement from a given dataset
+    and adds isotropic Gaussian noise to the samples.
+
+    Args:
+        dataset: A tensor of shape (num_samples, dim) containing the dataset.
+        noise_scale: Standard deviation of the isotropic Gaussian noise.
+        name: Optional name for the distribution.
+    """
+
+    def __init__(
+        self,
+        dataset: torch.Tensor,
+        noise_scale: float,
+        name: Optional[str] = None,
+    ):
+        super().__init__(dataset, name=name or "EmpiricalNoisyDistribution")
+        if noise_scale < 0:
+            raise ValueError("noise_scale must be non-negative")
+        self.noise_scale = noise_scale
+
+    def sample(self, sample_shape: Union[int, Tuple[int, ...]] = ()) -> torch.Tensor:
+        """
+        Generate samples by resampling with replacement from the dataset
+        and adding isotropic Gaussian noise.
+
+        Args:
+            sample_shape: Optional leading shape for number of samples.
+
+        Returns:
+            Tensor of shape (*sample_shape, dim)
+        """
+        # Get base samples from the empirical distribution
+        samples = super().sample(sample_shape)
+
+        # Add noise
+        noise = torch.randn_like(samples) * self.noise_scale
+        return samples + noise
