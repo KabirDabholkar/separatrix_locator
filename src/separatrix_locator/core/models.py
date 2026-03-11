@@ -7,7 +7,7 @@ to learn Koopman eigenfunctions for separatrix location.
 
 import torch
 import torch.nn as nn
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
 
 
 class ResNet(nn.Module):
@@ -24,6 +24,7 @@ class ResNet(nn.Module):
         output_dim: int = 1,
         input_scale_factor: float = 1.0,
         input_center: Optional[torch.Tensor] = None,
+        prewhitening_matrix: Optional[torch.Tensor] = None,
         scale_last_layer_by_inv_sqrt_hidden: bool = True
     ):
         super().__init__()
@@ -40,6 +41,19 @@ class ResNet(nn.Module):
             self.register_buffer('input_center', input_center)
         else:
             self.register_buffer('input_center', torch.zeros(input_dim))
+
+        # Optional prewhitening matrix (non-trainable, precomputed)
+        if prewhitening_matrix is not None:
+            if prewhitening_matrix.shape != (input_dim, input_dim):
+                raise ValueError(
+                    f"prewhitening_matrix must have shape ({input_dim}, {input_dim}), "
+                    f"got {prewhitening_matrix.shape}"
+                )
+            self.register_buffer("prewhitening_matrix", prewhitening_matrix)
+            self._has_prewhitening = True
+        else:
+            self.register_buffer("prewhitening_matrix", torch.eye(input_dim))
+            self._has_prewhitening = False
         
         # Build the network layers
         layers = []
@@ -61,6 +75,10 @@ class ResNet(nn.Module):
     def forward(self, x):
         # Input preprocessing
         x = (x - self.input_center) * self.input_scale_factor
+        # Apply fixed prewhitening transform (premultiply by square matrix)
+        # Using row-vector convention: x' = x W^T
+        if self.prewhitening_matrix is not None:
+            x = torch.matmul(x, self.prewhitening_matrix.t())
         
         # Forward through network with residual connections
         h = x
@@ -104,5 +122,57 @@ class ResNet(nn.Module):
             f"outputdim{self.output_dim}_"
             f"inputscalefactor{self.input_scale_factor}_"
             f"hasnonzero_center{has_nonzero_center}_"
-            f"smalllastlayer{self.scale_last_layer_by_inv_sqrt_hidden}"
+            f"smalllastlayer{self.scale_last_layer_by_inv_sqrt_hidden}_"
+            f"hasprewhitening{self._has_prewhitening}"
         )
+
+
+def compute_input_center_and_whitening(
+    dataset: torch.Tensor,
+    eps: float = 1e-6,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Compute an input mean (for `input_center`) and a whitening matrix
+    suitable for use with `ResNet(prewhitening_matrix=...)`.
+
+    The whitening matrix W is defined such that, for centered data x,
+        x_whitened = x @ W^T
+    has approximately identity covariance.
+
+    Args:
+        dataset: Tensor of shape (num_samples, dim) containing the data.
+        eps: Small regularization added to eigenvalues to avoid division
+            by zero when inverting the square root of the covariance.
+
+    Returns:
+        input_center: Tensor of shape (dim,) with the empirical mean.
+        prewhitening_matrix: Tensor of shape (dim, dim) with the
+            whitening transform.
+    """
+    if not isinstance(dataset, torch.Tensor):
+        raise TypeError("dataset must be a torch.Tensor")
+    if dataset.dim() != 2:
+        raise ValueError(f"dataset must be 2D, got shape {dataset.shape}")
+
+    # Empirical mean
+    input_center = dataset.mean(dim=0)
+
+    # Empirical covariance (unbiased)
+    centered = dataset - input_center
+    num_samples = centered.shape[0]
+    if num_samples <= 1:
+        raise ValueError("dataset must contain at least two samples to compute covariance")
+
+    cov = centered.t().matmul(centered) / (num_samples - 1)
+
+    # Symmetric eigendecomposition
+    eigvals, eigvecs = torch.linalg.eigh(cov)
+
+    # Inverse square root of eigenvalues with regularization
+    inv_sqrt_eigvals = (eigvals + eps).clamp_min(eps).rsqrt()
+
+    # Whitening matrix W such that cov_whitened ≈ I
+    # W = diag(inv_sqrt_eigvals) @ eigvecs.T
+    prewhitening_matrix = torch.diag(inv_sqrt_eigvals).matmul(eigvecs.t())
+
+    return input_center, prewhitening_matrix
