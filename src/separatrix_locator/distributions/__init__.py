@@ -5,7 +5,11 @@ This package decouples sampling distributions from dynamics definitions.
 """
 
 from .base import BaseDistribution, BaseDistributionList
-from .empirical import EmpiricalDistribution, EmpiricalNoisyDistribution
+from .empirical import (
+    EmpiricalDistribution,
+    EmpiricalNoisyDistribution,
+    EmpiricalConvexCombinationDistribution,
+)
 from .gaussian import MultivariateGaussian, multiscaler
 
 __all__ = [
@@ -13,6 +17,7 @@ __all__ = [
     "BaseDistributionList",
     "EmpiricalDistribution",
     "EmpiricalNoisyDistribution",
+    "EmpiricalConvexCombinationDistribution",
     "MultivariateGaussian",
     "multiscaler",
 ]
