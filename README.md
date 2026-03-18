@@ -69,6 +69,31 @@ python experiments/run_experiment.py configs/[config_name].py
 
 Resulting figures and models are saved in `results`.
 
+## Discrete-time projection reduction (work-in-progress)
+
+This repo also includes an extension that learns a **high-D -> low-D projection** together with **discrete-time latent dynamics** by enforcing:
+- a **one-step Koopman/eigenfunction consistency loss** (discrete version of the Koopman PDE residual), and
+- an optional **geometry preservation loss** in the latent space.
+
+### Flip-flop benchmark (2-bit and 3-bit)
+
+Run:
+```bash
+.venv/bin/python experiments/run_discrete_reduction_flipflop_kbit.py \
+  --k-list 2,3 --hidden-size 64 --n-trials 32 --n-time 50 --p 0.5 --seed 0 \
+  --reduction-epochs 2000
+```
+
+Geometry loss options:
+- `--geometry-loss stress` (default): distance-preserving “stress” loss in latent space
+- `--geometry-loss pca`: supervised regression of latent coordinates to the top PCA coordinates of the high-D RNN hidden states
+
+Outputs are saved under:
+- `results/discrete_reduction_flipflop/{k}bit_latent{k}_hidden{hidden_size}/`
+
+To visualize results in a notebook:
+- `notebook_tutorials/07_discrete_reduction_flipflop.ipynb`
+
 ## Model Architectures
 
 - **ResNet**: Residual network with skip connections,
