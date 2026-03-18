@@ -2,7 +2,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from src.separatrix_locator.core.training import compute_phi_and_dot_prod
+from separatrix_locator.core.training import compute_phi_and_dot_prod
 
 
 def test_compute_phi_and_dot_prod_matches_jvp():

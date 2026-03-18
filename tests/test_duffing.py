@@ -1,7 +1,7 @@
 import pytest
 
 torch = pytest.importorskip("torch")
-from src.dynamics.duffing import DuffingOscillator
+from separatrix_locator.dynamics.duffing import DuffingOscillator
 
 
 def test_function_shape_and_type():
